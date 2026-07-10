@@ -9,6 +9,8 @@ const http = require("http");
 const { Server } = require("socket.io");
 
 const app = express();
+
+console.log("FILES:", require("fs").readdirSync(__dirname));
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 3000;
