@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>FUN</title>
+
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #87CEEB;
+}
+
+canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+#shopBtn{
+    position:fixed;
+    top:70px;
+    left:10px;
+    height:40px;
+    z-index:200;
+    background-color: red;
+    border: yellow solid 3px;
+    border-radius: 5px;
+    font-size: 20px;
+    color: orangered;
+    -webkit-text-stroke: yellow 1px;
+}
+
+#shop{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+
+    background:#222;
+    color:white;
+
+    display:none;
+    align-items:center;
+    gap:10px;
+
+    padding:5px;
+    z-index:100;
+}
+
+#shop button{
+    height:40px;
+    background-color: red;
+    border: yellow solid 3px;
+    border-radius: 5px;
+    font-size: 20px;
+    color: orangered;
+    -webkit-text-stroke: yellow 1px;
+}
+
+#musicBtn{
+    position:fixed;
+    top:120px;
+    left:10px;
+    height:40px;
+    z-index:200;
+    background-color: red;
+    border: yellow solid 3px;
+    border-radius: 5px;
+    font-size: 20px;
+    color: orangered;
+    -webkit-text-stroke: yellow 1px;
+}
+
+.sounds{
+    background-color: red;
+    border: yellow solid 3px;
+    border-radius: 5px;
+    margin: 3px;
+    padding: 10px;
+    font-size: 20px;
+    color: orangered;
+    -webkit-text-stroke: yellow 1px;
+}
+
+#mobileControls{
+    position:fixed;
+    bottom:20px;
+    width:100%;
+
+    display:none;
+
+    justify-content:space-between;
+    padding:0 20px;
+
+    z-index:500;
+    box-sizing:border-box;
+}
+
+#mobileControls button{
+    width:100px;
+    height:100px;
+
+    font-size:60px;
+
+    border: black solid 5px;
+    border-radius:10px;
+
+    background:rgba(0,0,0,0.5);
+    color:white;
+    -webkit-text-stroke: black 3px;
+
+    touch-action:none;
+}
+
+#leftBtn{
+    position: fixed;
+    bottom: 20px;
+    left: 50px;
+}
+
+#rightBtn{
+    position: fixed;
+    bottom: 20px;
+    left: 200px;
+}
+
+#jumpBtn{
+    position: fixed;
+    bottom: 20px;
+    right: 200px;
+}
+
+#attackBtn{
+    position: fixed;
+    bottom: 20px;
+    right: 50px;
+}
+
+#fullBtn{
+    position:fixed;
+    top:80px;
+    right:10px;
+    height:40px;
+    z-index:200;
+    background-color:red;
+    border:yellow solid 3px;
+    border-radius:5px;
+    font-size:20px;
+    color:orangered;
+    -webkit-text-stroke:yellow 1px;
+}
+
+#mapBtn{
+    position:fixed;
+    top:170px;
+    left:10px;
+    height:40px;
+    z-index:200;
+    background-color:red;
+    border:yellow solid 3px;
+    border-radius:5px;
+    font-size:20px;
+    color:orangered;
+    -webkit-text-stroke:yellow 1px;
+}
+
+#startMenu{
+    position:fixed;
+    inset:0;
+    background: linear-gradient(10deg, #000000, #222222);
+    color:white;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+
+    z-index:10000;
+}
+
+#startMenu h1{
+    font-size:70px;
+    margin:20px;
+    color: red;
+    -webkit-text-stroke: yellow 1px;
+    font-weight: 900;
+}
+
+#playBtn{
+    width:220px;
+    height:70px;
+
+    font-size:30px;
+
+    background:red;
+
+    border:4px solid yellow;
+    border-radius:10px;
+
+    color: orange;
+    -webkit-text-stroke: yellow 1px;
+    font-weight: 900;
+}
+
+#loadingScreen{
+    position:fixed;
+    inset:0;
+    background:black;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:40px;
+    z-index:99999;
+    font-family: Arial, sans-serif;
+}
+
+.loaderText{
+    animation: pulse 1s infinite;
+}
+
+#startMenu button{
+    transition: all 0.1s;
+}
+
+#startMenu button:hover{
+    transform: scale(1.1);
+}
+
+#startMenu button:active{
+    transform: scale(0.9);
+}
+
+@keyframes pulse{
+    0%{opacity:0.3; transform:scale(1);}
+    50%{opacity:1; transform:scale(1.1);}
+    100%{opacity:0.3; transform:scale(1);}
+}
+
+#menuBtn{
+    position:fixed;
+    top:160px;
+    right:10px;
+    height:40px;
+    z-index:200;
+    background-color:red;
+    border:yellow solid 3px;
+    border-radius:5px;
+    font-size:20px;
+    color:orangered;
+    -webkit-text-stroke:yellow 1px;
+}
+
+</style>
+</head>
+
+<body>
+<div id="loadingScreen">
+    <div class="loaderText">Loading...</div>
+</div>
+<div id="startMenu">
+    <h1>FUN</h1>
+
+    <button id="accountInfoBtn"
+    onclick="showAccountInfo()"
+    style="
+        width:220px;
+        height:60px;
+        font-size:20px;
+        background:purple;
+        border:4px solid violet;
+        border-radius:10px;
+        color:white;
+        font-weight:900;
+        display:none;
+    ">
+        Аккаунт
+    </button>
+
+    <p>your color:</p>
+
+    <input type="color" id="playerColorPicker" value="#ff0000">
+
+    <p>Your nickname:</p>
+
+    <input
+        type="text"
+        id="nicknameInput"
+        maxlength="20"
+        placeholder="Enter nickname"
+        style="
+            width:220px;
+            height:35px;
+            font-size:20px;
+            text-align:center;
+        "
+    >
+
+    <p>Пароль:</p>
+
+    <input
+        type="password"
+        id="passwordInput"
+        maxlength="30"
+        placeholder="Введите пароль"
+        style="
+            width:220px;
+            height:35px;
+            font-size:20px;
+            text-align:center;
+        "
+    >
+
+    <div style="margin-top:5px;">
+        <label style="cursor:pointer;">
+            <input type="checkbox" id="showPassword">
+            Показать пароль
+        </label>
+    </div>
+
+    <br><br>
+
+    <div style="display:flex; gap:10px;">
+        <button id="playBtn" onclick="startGame()">
+            PLAY
+        </button>
+
+        <button id="createAccountBtn" onclick="createAccount()"
+            style="
+                width:220px;
+                height:70px;
+                font-size:24px;
+                background:blue;
+                border:4px solid cyan;
+                border-radius:10px;
+                color:white;
+                font-weight:900;
+            ">
+            Создать аккаунт
+        </button>
+    </div>
+    <br>
+
+    <div style="display:flex; gap:10px;">
+        <button id="loginBtn" onclick="loginAccount()"
+            style="
+                width:220px;
+                height:60px;
+                font-size:24px;
+                background:green;
+                border:4px solid lime;
+                border-radius:10px;
+                color:white;
+                font-weight:900;
+            ">
+            Войти
+        </button>
+
+        <button id="logoutBtn" onclick="logoutAccount()"
+            style="
+                width:220px;
+                height:60px;
+                font-size:24px;
+                background:#880000;
+                border:4px solid red;
+                border-radius:10px;
+                color:white;
+                font-weight:900;
+            ">
+            Выйти
+        </button>
+    </div>
+</div>
+
+<canvas id="c"></canvas>
+<button id="shopBtn" onclick="toggleShop()">🛒 Shop</button>
+<div id="shop">
+    💰:<span id="coins">0</span>
+    Level:<span id="level">1</span>
+
+    <button id="speedBtn" onclick="buySpeed()">+ Speed (100)</button>
+    <button id="powerBtn" onclick="buyPower()">+ Power (200)</button>
+    <button id="attackSpeedBtn" onclick="buyAttackSpeed()">+ Attack Speed (250)</button>
+    <button id="attackRangeBtn" onclick="buyAttackRange()">+ Range (250)</button>
+    <button id="nerfBtn" onclick="nerfEnemies()">- Enemy Power (300)</button>
+
+    <span id="stats"></span>
+</div>
+<button id="musicBtn" onclick="toggleMusicLibrary()">🎵 Music Library</button>
+
+<div id="musicLibrary" style="
+    position:fixed;
+    top:170px;
+    left:10px;
+    background:#222;
+    color:white;
+    padding:10px;
+    display:none;
+    z-index:300;
+    border-radius:8px;
+">
+    <div><b>Music Library</b></div>
+
+    <button class="sounds" onclick="playTrack(0)">Power Trip</button>
+    <button class="sounds" onclick="playTrack(1)">It Takes Me</button>
+    <button class="sounds" onclick="playTrack(2)">Don't Question Me</button>
+
+    <br><br>
+    <button onclick="stopMusic()">⏹ Stop</button>
+</div>
+
+<button id="mapBtn" onclick="toggleMapMenu()">📍 Maps</button>
+
+<div id="mapMenu" style="
+    position:fixed;
+    top:170px;
+    left:120px;
+    background:#222;
+    color:white;
+    padding:10px;
+    display:none;
+    z-index:300;
+    border-radius:8px;
+">
+    <button onclick="switchMap(0)">Map 1</button>
+    <button onclick="switchMap(1)">Map 2</button>
+    <button onclick="switchMap(2)">Map 3</button>
+    <button onclick="switchMap(3)">Arena</button>
+</div>
+
+<button id="fullBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+
+<button id="menuBtn" onclick="backToMenu()">В главное меню</button>
+
+<div id="mobileControls">
+    <button id="leftBtn">◀</button>
+    <button id="rightBtn">▶</button>
+    <button id="jumpBtn">▲</button>
+    <button id="attackBtn">⚔</button>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script>
+const socket = io(window.location.origin);
+
+let currentUser = {
+    nickname: null,
+    loggedIn: false
+};
+
+socket.on("connect", () => {
+    console.log("CONNECTED:", socket.id);
+});
+
+let otherPlayers = {};
+
+socket.on("players", (data) => {
+    if (!data || typeof data !== "object") return;
+    otherPlayers = data;
+});
+socket.on("damage", (data) => {
+
+    player.knockX = data.knockX * 3;
+    player.knockY = data.knockY * 2;
+
+});
+
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const keys = {};
+
+document.addEventListener("keydown", e => {
+    if(e.repeat) return;
+
+    keys[e.code] = true;
+
+    if(e.code === "KeyF"){
+        toggleFullscreen();
+    }
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.code] = false;
+});
+
+let playerColor = "red";
+let playerNickname = "Player";
+let gameStarted = false;
+
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", resizeCanvas);
+resizeCanvas();
+
+let currentMap = 0;
+
+const maps = [
+    {
+        bg: "#87CEEB",
+        platformColor: "green"
+    },
+    {
+        bg: "#ff9900",
+        platformColor: "#000000"
+    },
+    {
+        bg: "#110011",
+        platformColor: "#ffddff"
+    },
+    {
+        bg: "#333333",
+        platformColor: "#dddddd"
+    }
+];
+
+const mapEnemies = [
+    [],
+    [],
+    [],
+    []
+];
+
+const isMobile =
+    /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i
+    .test(navigator.userAgent);
+
+if(isMobile){
+
+    document.getElementById("mobileControls").style.display = "flex";
+
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    const jumpBtn = document.getElementById("jumpBtn");
+    const attackBtn = document.getElementById("attackBtn");
+
+    leftBtn.addEventListener("touchstart", e=>{
+        e.preventDefault();
+        keys["ArrowLeft"] = true;
+    });
+
+    leftBtn.addEventListener("touchend", ()=>{
+        keys["ArrowLeft"] = false;
+    });
+
+    rightBtn.addEventListener("touchstart", e=>{
+        e.preventDefault();
+        keys["ArrowRight"] = true;
+    });
+
+    rightBtn.addEventListener("touchend", ()=>{
+        keys["ArrowRight"] = false;
+    });
+
+    jumpBtn.addEventListener("touchstart", e=>{
+        e.preventDefault();
+        keys["Space"] = true;
+    });
+
+    jumpBtn.addEventListener("touchend", ()=>{
+        keys["Space"] = false;
+    });
+
+    attackBtn.addEventListener("touchstart", e=>{
+        e.preventDefault();
+        attack();
+    });
+}
+
+function toggleFullscreen(){
+    if(!document.fullscreenElement){
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+function resizeCanvas(){
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+// ================= CAMERA =================
+let camX = 0;
+
+// ================= PLAYER =================
+const player = {
+    x: 3000,
+    y: 100,
+    w: 40,
+    h: 40,
+
+    vx: 0,
+    vy: 0,
+
+    speed: 6,
+    jump: 14,
+
+    grounded: false,
+    dir: 1,
+
+    knockX: 0,
+    knockY: 0,
+
+    attacking: false,
+    attackTime: 0,
+    lastAttack: 0,
+    attackCooldown: 0
+};
+
+let coins = 0;
+
+let playerPower = 100;
+let attackCooldown = 800;
+let attackRange = 50;
+let enemyPowerNerf = 1;
+
+let invincible = false;
+let invincibleTimer = 0;
+let freezeHit = false;
+let shield = false;
+let shieldTimer = 0;
+
+let level = 1;
+
+let enemySpawnCounter = 0;
+
+let speedPrice = 100;
+let powerPrice = 200;
+let attackSpeedPrice = 250;
+let attackRangePrice = 250;
+let nerfPrice = 300;
+
+// ================= ENEMIES =================
+const enemies = [
+    makeEnemy(1900, 3.2, 80),
+    makeEnemy(1700, 2.0, 110),
+    makeEnemy(1500, 1.6, 140),
+
+    makeJumpEnemy(4200, 1.7, 90),
+    makeJumpEnemy(4400, 1.0, 120),
+
+    makeFastEnemy(2500, 5.4, 30),
+    makeFastEnemy(3000, 5.2, 40),
+    makeFastEnemy(3900, 5.0, 50),
+];
+
+function makeEnemy(x, speed, power){
+    return {
+        startX: x,
+        startY: 100,
+
+        x, y: 100,
+        w: 40,
+        h: 40,
+
+        vx: 0,
+        vy: 0,
+
+        speed,
+        power,
+
+        dir: -1,
+
+        knockX: 0,
+        knockY: 0,
+
+        attacking: false,
+        attackTime: 0,
+        lastAttack: 0,
+
+        stayNearTimer: 0,
+        stayNearLimit: 3 + Math.random() * 2,
+
+        invulnerable: false,
+        invulnerableTimer: 0,
+    };
+}
+
+function makeJumpEnemy(x, speed, power){
+    return {
+        type: "jumper",
+
+        startX: x,
+        startY: 100,
+
+        x, y: 100,
+        w: 40,
+        h: 40,
+
+        vx: 0,
+        vy: 0,
+
+        speed,
+        power,
+
+        dir: -1,
+
+        knockX: 0,
+        knockY: 0,
+
+        attacking: false,
+        attackTime: 0,
+        lastAttack: 0,
+
+        grounded: false,
+        jumpTimer: 0,
+
+        stayNearTimer: 0,
+        stayNearLimit: 3 + Math.random() * 2,
+
+        invulnerable: false,
+        invulnerableTimer: 0,
+    };
+}
+
+function makeFastEnemy(x, speed, power){
+    return {
+        type: "fast",
+
+        startX: x,
+        startY: 100,
+
+        x,
+        y: 100,
+
+        w: 30,
+        h: 30,
+
+        vx: 0,
+        vy: 0,
+
+        speed,
+        power,
+
+        dir: -1,
+
+        knockX: 0,
+        knockY: 0,
+
+        attacking: false,
+        attackTime: 0,
+        lastAttack: 0,
+
+        grounded: false,
+
+        stayNearTimer: 0,
+        stayNearLimit: 3 + Math.random() * 2,
+
+        invulnerable: false,
+        invulnerableTimer: 0,
+    };
+}
+
+const gravity = 0.7;
+
+// ================= PLATFORMS (×3) =================
+const mapPlatforms = [
+
+    // Карта 1
+    [
+        {x:1500, y:600, w:3000, h:50},
+        {x:2500, y:500, w:1000, h:20},
+        {x:3500, y:400, w:1000, h:20},
+        {x:1500, y:400, w:1000, h:20}
+    ],
+
+    // Карта 2
+    [
+        {x:1500, y:600, w:3000, h:50},
+        {x:2500, y:500, w:600, h:20},
+        {x:3500, y:500, w:600, h:20},
+        {x:1500, y:500, w:600, h:20},
+
+        {x:2000, y:400, w:600, h:20},
+        {x:3000, y:400, w:600, h:20}
+    ],
+
+    // Карта 3
+    [
+        {x:1500, y:600, w:3000, h:50},
+        {x:2500, y:400, w:500, h:20},
+        {x:3500, y:400, w:500, h:20},
+        {x:1500, y:400, w:500, h:20},
+
+        {x:2000, y:500, w:500, h:20},
+        {x:3000, y:500, w:500, h:20},
+        {x:4000, y:500, w:500, h:20},
+        {x:2000, y:300, w:500, h:20},
+        {x:3000, y:300, w:500, h:20},
+        {x:4000, y:300, w:500, h:20}
+    ],
+
+    // Arena
+    [
+        {x:2500, y:600, w:500, h:20},
+        {x:3500, y:600, w:500, h:20},
+        {x:1500, y:600, w:500, h:20},
+
+        {x:2500, y:400, w:500, h:20},
+        {x:3500, y:400, w:500, h:20},
+        {x:1500, y:400, w:500, h:20},
+
+        {x:2000, y:500, w:500, h:20},
+        {x:3000, y:500, w:500, h:20},
+        {x:4000, y:500, w:500, h:20},
+        {x:2000, y:300, w:500, h:20},
+        {x:3000, y:300, w:500, h:20},
+        {x:4000, y:300, w:500, h:20}
+    ]
+];
+
+// ================= INPUT =================
+function attack(){
+    const now = Date.now();
+
+    if(now - player.lastAttack > attackCooldown){
+        player.attacking = true;
+        player.attackTime = 5;
+        player.lastAttack = now;
+    }
+}
+
+function enemyAttack(e){
+    const now = Date.now();
+
+    const cooldown =
+        e.type === "fast"
+        ? 300
+        : 700;
+
+    if(now - e.lastAttack > cooldown){
+        e.attacking = true;
+        e.attackTime = 10;
+        e.lastAttack = now;
+    }
+}
+
+// ================= COLLISION =================
+function move(obj, delta){
+
+    let nextX = obj.x + (obj.vx + obj.knockX) * delta;
+    let nextY = obj.y + (obj.vy + obj.knockY) * delta;
+
+    obj.grounded = false;
+
+    for(const p of mapPlatforms[currentMap]){
+
+        const centerX = nextX + obj.w / 2;
+
+        if(
+            centerX > p.x &&
+            centerX < p.x + p.w &&
+            obj.y + obj.h <= p.y &&
+            nextY + obj.h >= p.y
+        ){
+            nextY = p.y - obj.h;
+            obj.vy = 0;
+            obj.grounded = true;
+        }
+    }
+
+    obj.x = nextX;
+    obj.y = nextY;
+
+    obj.knockX *= 0.85;
+    obj.knockY *= 0.85;
+}
+
+// ================= HIT =================
+function hit(a,b){
+    return a.x < b.x + b.w &&
+           a.x + a.w > b.x &&
+           a.y < b.y + b.h &&
+           a.y + a.h > b.y;
+}
+
+let shopOpen = false;
+
+function toggleShop(){
+    shopOpen = !shopOpen;
+    document.getElementById("shop").style.display = shopOpen ? "flex" : "none";
+}
+
+const tracks = [
+    new Audio("https://audio.ngfiles.com/780000/780702_Power-Trip--Geometry-Dash-.mp3?f1513957425"),
+    new Audio("https://audio.ngfiles.com/1013000/1013759_It-Takes-Me-feat-Waylon-Re.mp3?f1616080629"),
+    new Audio("https://audio.ngfiles.com/1086000/1086064_Dont-Question-Me-feat-Wayl.mp3?f1635011972"),
+];
+
+tracks.forEach(t => {
+    t.loop = true;
+    t.volume = 0.5;
+});
+
+let currentTrack = null;
+
+function startGame(){
+
+    if(!localStorage.getItem("token")){
+        alert("Сначала войдите в аккаунт!");
+        return;
+    }
+
+    const enteredNick =
+        document.getElementById("nicknameInput").value.trim();
+
+    if(enteredNick){
+        playerNickname = enteredNick;
+    }
+
+    playerColor =
+        document.getElementById("playerColorPicker").value;
+
+    saveGame();
+
+    document.getElementById("startMenu").style.display = "none";
+
+    gameStarted = true;
+
+    updateShopPrices();
+    requestAnimationFrame(loop);
+}
+
+async function createAccount() {
+
+    alert("createAccount");
+
+    const nickname = document.getElementById("nicknameInput").value.trim();
+    const password = document.getElementById("passwordInput").value.trim();
+
+    try {
+
+        console.log("Отправляем запрос...");
+
+        const res = await fetch("/register", {
+            method: "POST",
+            headers: {
+                "Content-Type":"application/json"
+            },
+            body: JSON.stringify({
+                nickname,
+                password
+            })
+        });
+
+        console.log("STATUS:", res.status);
+
+        const data = await res.json();
+
+        console.log(data);
+
+        alert(JSON.stringify(data));
+
+    } catch(err) {
+
+        console.error(err);
+
+        alert("ERROR:\n" + err.message);
+    }
+}
+
+async function loginAccount() {
+    try {
+        const nickname = document.getElementById("nicknameInput").value;
+        const password = document.getElementById("passwordInput").value;
+
+        const res = await fetch("/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ nickname, password })
+        });
+
+        const data = await res.json();
+
+        alert(JSON.stringify(data));
+
+        document.getElementById("accountInfoBtn").style.display = "block";
+
+        if (data.token) {
+            currentUser.nickname = data.nickname;
+            currentUser.loggedIn = true;
+            localStorage.setItem("token", data.token);
+            alert("LOGIN SUCCESS");
+        } else {
+            alert("NO TOKEN");
+        }
+
+    } catch (err) {
+        alert("LOGIN ERROR: " + err);
+    }
+}
+
+function logoutAccount(){
+    document.getElementById("nicknameInput").value = "";
+    document.getElementById("passwordInput").value = "";
+
+    playerNickname = "Player";
+
+    alert("Вы вышли из аккаунта!");
+    localStorage.removeItem("token");
+
+    currentUser.nickname = null;
+    currentUser.loggedIn = false;
+
+    document.getElementById("accountInfoBtn").style.display = "none";
+}
+
+function showAccountInfo(){
+
+    if(!currentUser.loggedIn){
+        alert("Ты не вошёл в аккаунт!");
+        return;
+    }
+
+    alert(
+        "Nick: " + currentUser.nickname + "\n" +
+        "Socket ID: " + socket.id
+    );
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const passwordInput = document.getElementById("passwordInput");
+    const showPassword = document.getElementById("showPassword");
+
+    showPassword.addEventListener("change", () => {
+        passwordInput.type = showPassword.checked
+            ? "text"
+            : "password";
+    });
+});
+
+function toggleMusicLibrary(){
+    const lib = document.getElementById("musicLibrary");
+    lib.style.display = lib.style.display === "none" ? "block" : "none";
+}
+
+function playTrack(i){
+    stopMusic();
+    currentTrack = tracks[i];
+    currentTrack.play();
+}
+
+function stopMusic(){
+    tracks.forEach(t => t.pause());
+    currentTrack = null;
+}
+
+function addLevel(){
+    level++;
+    document.getElementById("level").textContent = level;
+
+    if(level % 5 === 0){
+        spawnRandomEnemy();
+    }
+
+    saveGame();
+}
+
+function spawnRandomEnemy(){
+    const x = (Math.random() * 2900) + 1500;
+
+    const type = Math.floor(Math.random() * 3);
+
+    let e;
+
+    if(type === 0){
+        e = makeEnemy(x, 2 + Math.random(), 100);
+    }
+    else if(type === 1){
+        e = makeJumpEnemy(x, 1.5 + Math.random(), 90);
+    }
+    else{
+        e = makeFastEnemy(x);
+    }
+
+    enemies.push(e);
+}
+
+function updateShopPrices(){
+    document.getElementById("speedBtn").textContent =
+        `+ Speed (${speedPrice})`;
+
+    document.getElementById("powerBtn").textContent =
+        `+ Power (${powerPrice})`;
+
+    document.getElementById("attackSpeedBtn").textContent =
+        `+ Attack Speed (${attackSpeedPrice})`;
+
+    document.getElementById("attackRangeBtn").textContent =
+        `+ Range (${attackRangePrice})`;
+
+    document.getElementById("nerfBtn").textContent =
+        `- Enemy Power (${nerfPrice})`;
+}
+
+function buySpeed(){
+    if(coins >= speedPrice){
+        coins -= speedPrice;
+        player.speed += 1;
+
+        speedPrice = Math.floor(speedPrice + 10);
+
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+
+        saveGame();
+    }
+}
+
+function buyPower(){
+    if(coins >= powerPrice){
+        coins -= powerPrice;
+        playerPower += 10;
+
+        powerPrice = Math.floor(powerPrice + 10);
+
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+
+        saveGame();
+    }
+}
+
+function buyAttackSpeed(){
+    if(coins >= attackSpeedPrice){
+        coins -= attackSpeedPrice;
+
+        attackCooldown = Math.max(100, attackCooldown - 10);
+
+        attackSpeedPrice = Math.floor(attackSpeedPrice + 10);
+
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+
+        saveGame();
+    }
+}
+
+function buyAttackRange(){
+    if(coins >= attackRangePrice){
+        coins -= attackRangePrice;
+
+        attackRange += 5;
+
+        attackRangePrice = Math.floor(attackRangePrice + 10);
+
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+
+        saveGame();
+    }
+}
+
+function nerfEnemies(){
+    if(coins >= nerfPrice){
+        coins -= nerfPrice;
+
+        enemyPowerNerf = Math.max(0.3, enemyPowerNerf - 0.2);
+
+        nerfPrice = Math.floor(nerfPrice + 10);
+
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+
+        saveGame();
+    }
+}
+
+function toggleMapMenu(){
+    const m = document.getElementById("mapMenu");
+    m.style.display = m.style.display === "none" ? "block" : "none";
+}
+
+function switchMap(i){
+    const dx = player.x;
+    const dy = player.y;
+
+    currentMap = i;
+
+    // телепорт игрока
+    player.x = 3000;
+    player.y = 100;
+
+    // телепорт всех врагов вместе с ним (с сохранением относительной позиции)
+    for(const e of enemies){
+        e.x = 3000 + (e.x - dx);
+        e.y = 100 + (e.y - dy);
+
+        e.startX = e.x;
+        e.startY = e.y;
+    }
+}
+
+function backToMenu(){
+
+    // остановить игру
+    gameStarted = false;
+
+    // показать меню
+    document.getElementById("startMenu").style.display = "flex";
+
+    // (опционально) остановить музыку
+    stopMusic();
+
+    // (опционально) сброс камеры
+    camX = 0;
+
+    // (опционально) отключить управление
+    keys["KeyA"] = false;
+    keys["KeyD"] = false;
+    keys["Space"] = false;
+}
+
+async function saveGame(){
+    try {
+        const token = localStorage.getItem("token");
+        if(!token) return;
+
+        await fetch("/save", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            },
+            body: JSON.stringify({
+                coins,
+                level,
+                playerColor,
+                playerSpeed: player.speed,
+                playerPower,
+                attackCooldown,
+                attackRange
+            })
+        });
+    } catch (err) {
+        console.log("SAVE ERROR:", err);
+    }
+}
+
+async function loadGame(){
+    const token = localStorage.getItem("token");
+    if(!token) return;
+
+    try {
+        const res = await fetch("/load", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            }
+        });
+
+        const data = await res.json();
+
+        coins = data.coins;
+        level = data.level;
+        playerColor = data.playerColor;
+        player.speed = data.playerSpeed;
+        playerPower = data.playerPower;
+        attackCooldown = data.attackCooldown;
+        attackRange = data.attackRange;
+
+    } catch (err) {
+        console.log("LOAD ERROR:", err);
+    }
+}
+
+// ================= UPDATE =================
+function update(delta){
+    if(!gameStarted) return;
+
+    // ===== PLAYER =====
+    player.vx = 0;
+
+    if(keys["KeyA"] || keys["ArrowLeft"]){
+        player.vx = -player.speed;
+        player.dir = -1;
+    }
+
+    if(keys["KeyD"] || keys["ArrowRight"]){
+        player.vx = player.speed;
+        player.dir = 1;
+    }
+
+    if((keys["KeyW"] || keys["ArrowUp"] || keys["Space"]) && player.grounded){
+        player.vy = -player.jump;
+    }
+
+    if(keys["KeyH"] && !player.attacking){
+        attack();
+    }
+
+    player.vy += gravity * delta;
+
+    move(player, delta);
+
+    if(player.attackTime > 0) player.attackTime -= delta;
+    else player.attacking = false;
+
+    if (currentMap === 3 && player.attacking) {
+
+        const hitbox = {
+            x: player.dir === 1
+                ? player.x + player.w
+                : player.x - attackRange,
+            y: player.y,
+            w: attackRange,
+            h: player.h
+        };
+
+        for (const id in otherPlayers) {
+
+            if (id === socket.id) continue;
+
+            const p = otherPlayers[id];
+
+            if (p.map !== 3) continue;
+
+            const target = {
+                x: p.x,
+                y: p.y,
+                w: 40,
+                h: 40
+            };
+
+            if (hit(hitbox, target)) {
+
+                socket.emit("pvpHit", id);
+
+                player.attackTime = 0;
+
+                break;
+            }
+        }
+    }
+
+    // ===== ENEMIES =====
+    if(currentMap !== 3){
+        const mainPlatform = mapPlatforms[currentMap][0];
+
+        for(const e of enemies){
+
+            if(e.invulnerable){
+                e.invulnerableTimer -= delta;
+
+                if(e.invulnerableTimer <= 0){
+                    e.invulnerable = false;
+                }
+            }
+
+            // AI движение
+            const onMainPlatform =
+                player.x >= 1500 &&
+                player.x <= 4460 &&
+                player.y + player.h <= 650;
+
+            if(onMainPlatform){
+                if(player.x < e.x){
+                    e.vx = -e.speed;
+                    e.dir = -1;
+                } else {
+                    e.vx = e.speed;
+                    e.dir = 1;
+                }
+            } else {
+                e.vx = 0; // ждать на платформе
+            }
+
+            // гравитация
+            e.vy += gravity * delta;
+
+            move(e, delta);
+
+            // ===== падение за карту =====
+            if (e.y > window.innerHeight + 300) {
+
+                if(e.type === "jumper"){
+                    coins += 1;
+                }
+                else if(e.type === "fast"){
+                    coins += 5;
+                }
+                else{
+                    coins += 2;
+                }
+
+                document.getElementById("coins").textContent = coins;
+                saveGame();
+
+                e.x = e.startX;
+                e.y = e.startY;
+
+                e.vx = 0;
+                e.vy = 0;
+
+                e.knockX = 0;
+                e.knockY = 0;
+
+                e.invulnerable = true;
+                e.invulnerableTimer = 180;
+            }
+
+            // ===== атака =====
+            if(e.attackTime > 0){
+                e.attackTime -= delta;
+            } else {
+                e.attacking = false;
+            }
+
+            if(hit(e, player)){
+                enemyAttack(e);
+
+                if(e.attacking){
+                    player.knockX = e.dir * e.power * enemyPowerNerf;
+                    player.knockY = -e.power * 0.4 * enemyPowerNerf;
+                }
+            }
+
+            // ===== прыгуны =====
+            if(e.type === "jumper"){
+                if(e.jumpTimer <= 0){
+                    e.vy = -15 - Math.random() * 5;
+                    e.jumpTimer = 70 + Math.random() * 10;
+                } else {
+                    e.jumpTimer -= delta;
+                }
+            }
+
+            // ===== удар игрока =====
+            if(player.attackTime > 0){
+
+                const range = attackRange;
+
+                const hitbox = {
+                    x: player.dir === 1 ? player.x + player.w : player.x - range,
+                    y: player.y,
+                    w: range,
+                    h: player.h
+                };
+
+                if(hit(hitbox, e) && !e.invulnerable){
+
+                    e.knockX = player.dir * e.power * 1.1;
+                    e.knockY = -e.power * 0.5;
+
+                    player.attackTime = 0;
+                }
+            }
+            if (Math.abs(e.x - player.x) <= 2) {
+            
+                e.stayNearTimer += delta / 60;
+            
+                if (e.stayNearTimer >= e.stayNearLimit) {
+                
+                    e.vy = -18;
+                
+                    e.stayNearTimer = 0;
+                    e.stayNearLimit = 3 + Math.random() * 2;
+                }
+            
+            } else {
+                e.stayNearTimer = 0;
+            }
+        }
+    }
+
+    // ===== CAMERA =====
+    camX += (player.x - window.innerWidth / 2 - camX) * 0.1;
+
+    // reset player fall
+    if(player.y > window.innerHeight + 300){
+        player.x = 3000;
+        player.y = 100;
+    }
+
+    if (gameStarted) {
+        socket.emit("move", {
+            x: player.x,
+            y: player.y,
+            nickname: playerNickname,
+            color: playerColor,
+            map: currentMap
+        });
+    }
+
+    document.getElementById("stats").textContent =
+        `speed:${player.speed}___power:${playerPower}___CD:${attackCooldown}ms___EN:${enemies.length}`;
+}
+
+// ================= DRAW =================
+function draw(){
+    if(!gameStarted) return;
+
+    ctx.fillStyle = maps[currentMap].bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+
+    const zoom = isMobile ? 0.6 : 1;
+    const cameraYOffset = isMobile ? -150 : 0;
+
+    ctx.translate(window.innerWidth / 2, window.innerHeight / 2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(
+        -camX - window.innerWidth / 2,
+        -window.innerHeight / 2 + cameraYOffset
+    );
+
+    // ===== платформы =====
+    ctx.fillStyle = maps[currentMap].platformColor;
+
+    for(const p of mapPlatforms[currentMap]){
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+    }
+
+    // ===== игрок =====
+    ctx.fillStyle = playerColor;
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.strokeStyle = "yellow"; 
+    ctx.lineWidth = 3; 
+    ctx.strokeRect(player.x, player.y, player.w, player.h);
+    ctx.fillStyle = "white";
+    ctx.font = "bold 18px Arial";
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+        playerNickname,
+        player.x + player.w / 2,
+        player.y - 10
+    );
+
+    // ===== враги =====
+
+    if(currentMap !== 3){
+        for(const e of enemies){
+            if(e.invulnerable){
+                ctx.globalAlpha = 0.4;
+            }
+
+            if(e.type === "jumper"){
+                ctx.fillStyle = "yellow";
+            }
+            else if(e.type === "fast"){
+                ctx.fillStyle = "purple";
+            }
+            else{
+                ctx.fillStyle = "blue";
+            }
+
+            ctx.fillRect(e.x, e.y, e.w, e.h);
+            ctx.globalAlpha = 1;
+
+            // эффект атаки врага
+            if(e.attacking){
+
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 6;
+
+                const y = e.y + e.h / 2;
+                const x1 = e.dir === 1 ? e.x + e.w : e.x;
+                const x2 = e.dir === 1 ? x1 + 60 : x1 - 60;
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y);
+                ctx.lineTo(x2, y);
+                ctx.stroke();
+            }
+        }
+    }
+
+    // ===== эффект атаки игрока =====
+    if(player.attacking){
+
+        ctx.strokeStyle = "brown";
+        ctx.lineWidth = 6;
+
+        const y = player.y + player.h / 2;
+        const x1 = player.dir === 1 ? player.x + player.w : player.x;
+        const x2 = player.dir === 1 
+            ? x1 + attackRange 
+            : x1 - attackRange;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
+        ctx.stroke();
+    }
+
+    for (const id in (otherPlayers || {})) {
+        if (id === socket.id) continue;
+
+        const p = otherPlayers[id];
+        if (p.map !== currentMap) continue;
+
+        ctx.fillStyle = "white";
+        ctx.font = "bold 18px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(p.nickname, p.x + 20, p.y - 10);
+
+        ctx.globalAlpha = 0.4;
+
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 40, 40);
+        ctx.strokeStyle = "rgba(120, 120, 120, 0.9)"; 
+        ctx.lineWidth = 3; 
+        ctx.strokeRect(p.x, p.y, 40, 40);
+    }
+
+    ctx.restore();
+}
+
+// ================= LOOP =================
+let lastTime = performance.now();
+
+function loop(time){
+
+    let delta = (time - lastTime) / 16.67;
+    lastTime = time;
+
+    delta = Math.min(delta, 2);
+
+    update(delta);
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+window.addEventListener("load", loadGame);
+
+window.addEventListener("load", () => {
+
+    const loader = document.getElementById("loadingScreen");
+
+    requestAnimationFrame(() => {
+        loader.style.opacity = "0";
+        loader.style.transition = "0.5s";
+
+        setTimeout(() => {
+            loader.style.display = "none";
+        }, 500);
+    });
+
+    const acc =
+        JSON.parse(localStorage.getItem("FUN_ACCOUNT"));
+
+    if(acc){
+
+        document.getElementById("nicknameInput").value =
+            acc.nickname;
+
+        document.getElementById("passwordInput").value =
+            acc.password;
+
+        playerNickname = acc.nickname;
+    }
+
+    loadGame();
+});
+</script>
+</body>
+</html>
+
+♦♦♦BENprogrammer♦♦♦
+ben164tnt
+
+node server.js
+cloudflared tunnel --url http://localhost:3000
