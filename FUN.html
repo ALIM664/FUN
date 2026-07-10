@@ -447,7 +447,7 @@ canvas {
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <script>
-const socket = io(window.location.origin);
+const socket = io(window.location.origin);а
 
 let currentUser = {
     nickname: null,
@@ -1617,7 +1617,7 @@ function draw(){
         ctx.textAlign = "center";
         ctx.fillText(p.nickname, p.x + 20, p.y - 10);
 
-        ctx.globalAlpha = 0.4;
+        ctx.globalAlpha = currentMap === 3 ? 1 : 0.4;
 
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, 40, 40);
@@ -1679,9 +1679,3 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
-
-♦♦♦BENprogrammer♦♦♦
-ben164tnt
-
-node server.js
-cloudflared tunnel --url http://localhost:3000
