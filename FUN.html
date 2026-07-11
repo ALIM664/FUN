@@ -38,7 +38,7 @@ canvas {
     position:fixed;
     top:0;
     left:0;
-    width:100%; 
+    width:100%;
     height:60px;
 
     background:#222;
@@ -280,6 +280,21 @@ canvas {
         display:none;
     ">
         Аккаунт
+    </button>
+
+    <button id="deleteAccountBtn" onclick="deleteAccount()"
+    style="
+        width:220px;
+        height:60px;
+        font-size:20px;
+        background:darkred;
+        border:4px solid red;
+        border-radius:10px;
+        color:white;
+        font-weight:900;
+        display:none;
+    ">
+        Удалить аккаунт
     </button>
 
     <p>your color:</p>
@@ -989,19 +1004,114 @@ async function loginAccount() {
 
         alert(JSON.stringify(data));
 
-        document.getElementById("accountInfoBtn").style.display = "block";
-
         if (data.token) {
             currentUser.nickname = data.nickname;
+            currentUser.id = data.id;
             currentUser.loggedIn = true;
             localStorage.setItem("token", data.token);
+
+            localStorage.setItem("account", JSON.stringify({
+                nickname: data.nickname,
+                id: data.id,
+                password: password,
+                loggedIn: true
+            }));
+
             alert("LOGIN SUCCESS");
+            document.getElementById("accountInfoBtn").style.display = "block";
+            document.getElementById("deleteAccountBtn").style.display = "block";
         } else {
             alert("NO TOKEN");
         }
 
     } catch (err) {
         alert("LOGIN ERROR: " + err);
+    }
+}
+
+function restoreLogin() {
+
+    const token = localStorage.getItem("token");
+    const account = localStorage.getItem("account");
+
+    if (!token || !account) return;
+
+    try {
+
+        const data = JSON.parse(account);
+
+        currentUser.nickname = data.nickname;
+        currentUser.id = data.id;
+        currentUser.loggedIn = true;
+
+        playerNickname = data.nickname;
+
+        document.getElementById("nicknameInput").value = data.nickname;
+
+        document.getElementById("accountInfoBtn").style.display = "block";
+        document.getElementById("deleteAccountBtn").style.display = "block";
+
+    } catch (e) {
+        localStorage.removeItem("account");
+        localStorage.removeItem("token");
+    }
+}
+
+async function deleteAccount(){
+
+    const token = localStorage.getItem("token");
+
+    if(!token){
+        alert("Нет входа в аккаунт");
+        return;
+    }
+
+    if(!confirm("Удалить аккаунт навсегда?")) return;
+
+    try {
+
+        const res = await fetch("/account", {
+            method:"DELETE",
+            headers:{
+                "Authorization": token
+            }
+        });
+
+        console.log("STATUS:", res.status);
+
+        const data = await res.json();
+
+        console.log("DELETE RESPONSE:", data);
+
+        if(data.success){
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("account");
+            localStorage.removeItem("FUN_ACCOUNT");
+
+            currentUser.nickname = null;
+            currentUser.id = null;
+            currentUser.loggedIn = false;
+
+            alert("Аккаунт удалён");
+            
+            document.getElementById("accountInfoBtn").style.display = "none";
+            document.getElementById("deleteAccountBtn").style.display = "none";
+
+            location.reload();
+
+        } else {
+
+            alert("Ошибка удаления: " + JSON.stringify(data));
+
+        }
+
+    } catch(err){
+
+        console.error(err);
+
+        alert("DELETE ERROR: " + err.message);
+
     }
 }
 
@@ -1012,12 +1122,16 @@ function logoutAccount(){
     playerNickname = "Player";
 
     alert("Вы вышли из аккаунта!");
-    localStorage.removeItem("token");
 
     currentUser.nickname = null;
+    currentUser.id = null;
     currentUser.loggedIn = false;
 
+    localStorage.removeItem("token");
+    localStorage.removeItem("account");
+
     document.getElementById("accountInfoBtn").style.display = "none";
+    document.getElementById("deleteAccountBtn").style.display = "none";
 }
 
 function showAccountInfo(){
@@ -1029,7 +1143,7 @@ function showAccountInfo(){
 
     alert(
         "Nick: " + currentUser.nickname + "\n" +
-        "Socket ID: " + socket.id
+        "ID: " + currentUser.id
     );
 }
 
@@ -1661,7 +1775,7 @@ window.addEventListener("load", () => {
     });
 
     const acc =
-        JSON.parse(localStorage.getItem("FUN_ACCOUNT"));
+        JSON.parse(localStorage.getItem("account"));
 
     if(acc){
 
@@ -1675,6 +1789,7 @@ window.addEventListener("load", () => {
     }
 
     loadGame();
+    restoreLogin();
 });
 </script>
 </body>
