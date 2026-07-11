@@ -910,9 +910,9 @@ function toggleShop(){
 }
 
 const tracks = [
-    new Audio("https://audio.ngfiles.com/780000/780702_Power-Trip--Geometry-Dash-.mp3?f1513957425"),
-    new Audio("https://audio.ngfiles.com/1013000/1013759_It-Takes-Me-feat-Waylon-Re.mp3?f1616080629"),
-    new Audio("https://audio.ngfiles.com/1086000/1086064_Dont-Question-Me-feat-Wayl.mp3?f1635011972"),
+    new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/Boom_Kitty_-_Power_Trip.mp3"),
+    new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/Boom_Kitty_-_It_Takes_Me_feat_Waylon_Reavis_(SkySound.cc).mp3"),
+    new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/Boom_Kitty_-_Dont_Question_Me.mp3"),
 ];
 
 tracks.forEach(t => {
@@ -1183,6 +1183,25 @@ function addLevel(){
     }
 
     saveGame();
+
+    const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/1029200_Bitsplosion.mp3");
+
+    audio.play().catch(err => console.log(err));
+
+    const startTime = 119.1;
+    const endTime = 119.8;
+
+    audio.addEventListener("loadedmetadata", () => {
+      audio.currentTime = startTime;
+      audio.play();
+    });
+
+    audio.addEventListener("timeupdate", () => {
+      if (audio.currentTime >= endTime) {
+        audio.pause();
+        audio.currentTime = startTime;
+      }
+    });
 }
 
 function spawnRandomEnemy(){
@@ -1509,7 +1528,7 @@ function update(delta){
             if (e.y > window.innerHeight + 300) {
 
                 if(e.type === "jumper"){
-                    coins += 1;
+                    coins += 1000000;
                 }
                 else if(e.type === "fast"){
                     coins += 5;
