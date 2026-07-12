@@ -1,5 +1,6 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 const bcrypt = require("bcrypt");
@@ -34,6 +35,9 @@ const db = new sqlite3.Database("./game.db", err => {
         console.log("SQLite connected");
     }
 });
+
+console.log("DATABASE PATH:", path.resolve("./game.db"));
+console.log("DATABASE EXISTS:", fs.existsSync("./game.db"));
 
 db.serialize(() => {
 
