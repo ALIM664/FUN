@@ -389,6 +389,26 @@ app.get("/player/:query", (req, res) => {
 
 });
 
+app.get("/debug/users", (req,res)=>{
+
+    db.all(
+        "SELECT id, nickname FROM users",
+        [],
+        (err, rows)=>{
+
+            if(err){
+                return res.json({
+                    error: err.message
+                });
+            }
+
+            res.json(rows);
+
+        }
+    );
+
+});
+
 // ================= SOCKET.IO =================
 
 const io = new Server(server,{
