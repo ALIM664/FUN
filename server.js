@@ -433,7 +433,7 @@ app.get("/fixsave/:id", (req,res)=>{
 
     db.run(
         `
-        INSERT OR IGNORE INTO saves(
+        INSERT INTO saves(
             userId,
             coins,
             level,
@@ -446,7 +446,7 @@ app.get("/fixsave/:id", (req,res)=>{
         VALUES(?,?,?,?,?,?,?,?)
         `,
         [
-            req.params.id,
+            Number(req.params.id),
             0,
             1,
             "#ff0000",
@@ -455,13 +455,20 @@ app.get("/fixsave/:id", (req,res)=>{
             800,
             50
         ],
-        err=>{
+        function(err){
 
-            if(err)
-                return res.json({error:err.message});
+            if(err){
+                console.log("FIXSAVE ERROR:", err);
+
+                return res.json({
+                    success:false,
+                    error:err.message
+                });
+            }
 
             res.json({
-                success:true
+                success:true,
+                id:this.lastID
             });
 
         }
