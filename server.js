@@ -144,16 +144,17 @@ app.post("/login", (req, res) => {
         [nickname],
         async (err, user) => {
 
-            if (err)
-                return res.status(500).json({ error: err.message });
-
-            if (!user)
+            if (!user) {
                 return res.json({ error: "not user found" });
+            }
 
             const ok = await bcrypt.compare(password, user.password);
 
-            if (!ok)
+            if (!ok) {
                 return res.json({ error: "wrong password" });
+            }
+
+            console.log("LOGIN USER:", user);
 
             const token = jwt.sign(
                 { id: user.id },
@@ -168,7 +169,6 @@ app.post("/login", (req, res) => {
             });
         }
     );
-
 });
 
 app.delete("/account", auth, (req, res) => {
