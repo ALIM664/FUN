@@ -409,6 +409,46 @@ app.get("/debug/users", (req,res)=>{
 
 });
 
+app.get("/fixsave/:id", (req,res)=>{
+
+    db.run(
+        `
+        INSERT OR IGNORE INTO saves(
+            userId,
+            coins,
+            level,
+            playerColor,
+            playerSpeed,
+            playerPower,
+            attackCooldown,
+            attackRange
+        )
+        VALUES(?,?,?,?,?,?,?,?)
+        `,
+        [
+            req.params.id,
+            0,
+            1,
+            "#ff0000",
+            6,
+            100,
+            800,
+            50
+        ],
+        err=>{
+
+            if(err)
+                return res.json({error:err.message});
+
+            res.json({
+                success:true
+            });
+
+        }
+    );
+
+});
+
 // ================= SOCKET.IO =================
 
 const io = new Server(server,{
