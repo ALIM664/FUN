@@ -338,6 +338,8 @@ app.get("/player/:query", (req, res) => {
 
     const query = req.params.query;
 
+    console.log("SEARCH QUERY:", query);
+
     db.get(
         `
         SELECT 
@@ -359,12 +361,13 @@ app.get("/player/:query", (req, res) => {
         WHERE users.id = ?
         OR users.nickname = ?
         `,
-        [query, query],
+        [Number(query) || -1, query],
         (err, row) => {
 
-            if(err){
-                console.log("SEARCH ERROR:", err);
+            console.log("SQL ERROR:", err);
+            console.log("SQL ROW:", row);
 
+            if(err){
                 return res.status(500).json({
                     success:false,
                     error:err.message
@@ -372,11 +375,10 @@ app.get("/player/:query", (req, res) => {
             }
 
             if(!row){
-
                 return res.json({
-                    success:false
+                    success:false,
+                    message:"No row"
                 });
-
             }
 
             res.json({
