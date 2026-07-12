@@ -431,6 +431,41 @@ app.get("/debug/saves", (req,res)=>{
 
 });
 
+app.get("/debug/player/:id", (req,res)=>{
+
+    db.get(
+        `
+        SELECT *
+        FROM users
+        WHERE id = ?
+        `,
+        [req.params.id],
+        (err, user)=>{
+
+            db.get(
+                `
+                SELECT *
+                FROM saves
+                WHERE userId = ?
+                `,
+                [req.params.id],
+                (err2, save)=>{
+
+                    res.json({
+                        user,
+                        save,
+                        err,
+                        err2
+                    });
+
+                }
+            );
+
+        }
+    );
+
+});
+
 app.get("/fixsave/:id", (req,res)=>{
 
     db.run(
