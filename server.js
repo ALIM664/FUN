@@ -9,20 +9,18 @@ const http = require("http");
 const { Server } = require("socket.io");
 
 const app = express();
-
-console.log("FILES:", require("fs").readdirSync(__dirname));
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 3000;
 const SECRET = "super_secret_key_change_this";
 
-const users = [];
-
 app.use(cors());
 app.use(express.json());
 
+// раздача файлов
 app.use(express.static(__dirname));
 
+// главная страница
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "FUN.html"));
 });
@@ -66,12 +64,33 @@ db.serialize(() => {
     )
     `);
 
+    db.run(`ALTER TABLE saves ADD COLUMN enemyPowerNerf REAL DEFAULT 1`);
+
+    db.run(`ALTER TABLE saves ADD COLUMN speedPrice INTEGER DEFAULT 100`);
+
+    db.run(`ALTER TABLE saves ADD COLUMN powerPrice INTEGER DEFAULT 200`);
+
+    db.run(`ALTER TABLE saves ADD COLUMN attackSpeedPrice INTEGER DEFAULT 250`);
+
+    db.run(`ALTER TABLE saves ADD COLUMN attackRangePrice INTEGER DEFAULT 250`);
+
+    db.run(`ALTER TABLE saves ADD COLUMN nerfPrice INTEGER DEFAULT 300`);
+
 });
 
 // ================= AUTH =================
 
-function auth(req, res, next) {
+function auth(req,res,next){
+
     const token = req.headers.authorization;
+
+    console.log("AUTH TOKEN:", token);
+
+    if(!token){
+        return res.status(401).json({
+            error:"No token"
+        });
+    }
 
     if (!token) {
         return res.status(401).json({ error: "No token" });
@@ -88,53 +107,101 @@ function auth(req, res, next) {
 
 // ================= REGISTER =================
 
-app.post("/register", (req, res) => {
+app.post("/register", async (req, res) => {
     const { nickname, password } = req.body;
 
     if (!nickname || !password) {
         return res.json({ error: "empty fields" });
     }
 
-    const exists = users.find(u => u.nickname === nickname);
+    const hash = await bcrypt.hash(password, 10);
 
-    if (exists) {
-        return res.json({ error: "user exists" });
-    }
+    db.run(
+        `INSERT INTO users(nickname,password) VALUES(?,?)`,
+        [nickname, hash],
+        function(err) {
 
-    users.push({
-        id: users.length + 1,
-        nickname,
-        password
-    });
+            if (err) {
+                return res.json({ error: "user exists" });
+            }
 
-    console.log("REGISTER OK:", users);
-
-    res.json({ success: true });
+            res.json({
+                success: true,
+                id: this.lastID,
+                nickname: nickname
+            });
+        }
+    );
 });
 
 
 app.post("/login", (req, res) => {
+
     const { nickname, password } = req.body;
 
-    const user = users.find(u =>
-        u.nickname === nickname &&
-        u.password === password
+    db.get(
+        `SELECT * FROM users WHERE nickname=?`,
+        [nickname],
+        async (err, user) => {
+
+            if (err)
+                return res.status(500).json({ error: err.message });
+
+            if (!user)
+                return res.json({ error: "not user found" });
+
+            const ok = await bcrypt.compare(password, user.password);
+
+            if (!ok)
+                return res.json({ error: "wrong password" });
+
+            const token = jwt.sign(
+                { id: user.id },
+                SECRET,
+                { expiresIn: "7d" }
+            );
+
+            res.json({
+                token,
+                id: user.id,
+                nickname: user.nickname
+            });
+        }
     );
 
-    if (!user) {
-        return res.json({ error: "not user found" });
-    }
+});
 
-    const token = jwt.sign(
-        { id: users.indexOf(user) + 1 },
-        SECRET,
-        { expiresIn: "7d" }
-    );
+app.delete("/account", auth, (req, res) => {
 
-    res.json({
-        token,
-        nickname
+    const userId = req.userId;
+
+    db.serialize(() => {
+
+        db.run(
+            "DELETE FROM saves WHERE userId=?",
+            [userId]
+        );
+
+        db.run(
+            "DELETE FROM users WHERE id=?",
+            [userId],
+            function(err){
+
+                if(err){
+                    return res.status(500).json({
+                        error: err.message
+                    });
+                }
+
+                res.json({
+                    success:true
+                });
+
+            }
+        );
+
     });
+
 });
 
 // ================= SAVE =================
@@ -153,9 +220,23 @@ app.post("/save", auth, (req, res) => {
             playerSpeed,
             playerPower,
             attackCooldown,
-            attackRange
+            attackRange,
+
+            enemyPowerNerf,
+
+            speedPrice,
+            powerPrice,
+            attackSpeedPrice,
+            attackRangePrice,
+            nerfPrice,
+
+            invincible,
+            invincibleTimer,
+            freezeHit,
+            shield,
+            shieldTimer
         )
-        VALUES(?,?,?,?,?,?,?,?)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(userId)
         DO UPDATE SET
             coins=excluded.coins,
@@ -167,14 +248,25 @@ app.post("/save", auth, (req, res) => {
             attackRange=excluded.attackRange
         `,
         [
-            req.userId,
-            data.coins,
-            data.level,
-            data.playerColor,
-            data.playerSpeed,
-            data.playerPower,
-            data.attackCooldown,
-            data.attackRange
+        req.userId,
+        data.coins,
+        data.level,
+        data.playerColor,
+        data.playerSpeed,
+        data.playerPower,
+        data.attackCooldown,
+        data.attackRange,
+        data.enemyPowerNerf,
+        data.speedPrice,
+        data.powerPrice,
+        data.attackSpeedPrice,
+        data.attackRangePrice,
+        data.nerfPrice,
+        data.invincible ? 1 : 0,
+        data.invincibleTimer,
+        data.freezeHit ? 1 : 0,
+        data.shield ? 1 : 0,
+        data.shieldTimer
         ],
         err => {
 
