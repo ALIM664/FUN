@@ -409,6 +409,26 @@ app.get("/debug/users", (req,res)=>{
 
 });
 
+app.get("/debug/saves", (req,res)=>{
+
+    db.all(
+        "SELECT * FROM saves",
+        [],
+        (err, rows)=>{
+
+            if(err){
+                return res.json({
+                    error: err.message
+                });
+            }
+
+            res.json(rows);
+
+        }
+    );
+
+});
+
 app.get("/fixsave/:id", (req,res)=>{
 
     db.run(
