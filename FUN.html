@@ -1193,7 +1193,12 @@ async function searchPlayer(){
     try{
 
         const res = await fetch("/player/" + encodeURIComponent(query));
+
+        console.log("STATUS:", res.status);
+
         const data = await res.json();
+
+        console.log("PLAYER SEARCH:", data);
 
         if(!data.success){
             result.innerHTML = "<span style='color:red'>Игрок не найден.</span>";
@@ -1205,13 +1210,11 @@ async function searchPlayer(){
             <p><b>ID:</b> ${data.id}</p>
             <p><b>Уровень:</b> ${data.level}</p>
             <p><b>Монеты:</b> ${data.coins}</p>
-            <p><b>Скорость:</b> ${data.playerSpeed}</p>
-            <p><b>Сила:</b> ${data.playerPower}</p>
-            <p><b>Дальность атаки:</b> ${data.attackRange}</p>
-            <p><b>Перезарядка:</b> ${data.attackCooldown} мс</p>
         `;
 
-    }catch{
+    }catch(err){
+
+        console.log("SEARCH ERROR:", err);
 
         result.innerHTML =
             "<span style='color:red'>Ошибка соединения с сервером.</span>";
