@@ -256,6 +256,17 @@ canvas {
     -webkit-text-stroke:yellow 1px;
 }
 
+.searchResult{
+    margin-top:10px;
+    padding:12px;
+    border:1px solid #555;
+    border-radius:8px;
+    background:#222;
+    color:white;
+    min-height:80px;
+    min-width: 100px;
+}
+
 </style>
 </head>
 
@@ -296,6 +307,11 @@ canvas {
     ">
         Удалить аккаунт
     </button>
+
+    <input id="searchPlayerInput" placeholder="Ник или ID">
+    <button onclick="searchPlayer()">Поиск</button>
+
+    <div id="searchResult" class="searchResult"></div>
 
     <p>your color:</p>
 
@@ -1157,6 +1173,48 @@ document.addEventListener("DOMContentLoaded", () => {
             : "password";
     });
 });
+
+async function searchPlayer(){
+
+    const query = document
+        .getElementById("searchPlayerInput")
+        .value
+        .trim();
+
+    if(!query) return;
+
+    const result = document.getElementById("searchResult");
+
+    result.innerHTML = "Поиск...";
+
+    try{
+
+        const res = await fetch("/player/" + encodeURIComponent(query));
+        const data = await res.json();
+
+        if(!data.success){
+            result.innerHTML = "<span style='color:red'>Игрок не найден.</span>";
+            return;
+        }
+
+        result.innerHTML = `
+            <h3>${data.nickname}</h3>
+            <p><b>ID:</b> ${data.id}</p>
+            <p><b>Уровень:</b> ${data.level}</p>
+            <p><b>Монеты:</b> ${data.coins}</p>
+            <p><b>Скорость:</b> ${data.playerSpeed}</p>
+            <p><b>Сила:</b> ${data.playerPower}</p>
+            <p><b>Дальность атаки:</b> ${data.attackRange}</p>
+            <p><b>Перезарядка:</b> ${data.attackCooldown} мс</p>
+        `;
+
+    }catch{
+
+        result.innerHTML =
+            "<span style='color:red'>Ошибка соединения с сервером.</span>";
+
+    }
+}
 
 function toggleMusicLibrary(){
     const lib = document.getElementById("musicLibrary");
