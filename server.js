@@ -334,6 +334,61 @@ app.post("/load", auth, (req, res) => {
 
 }); 
 
+app.get("/player/:query", (req, res) => {
+
+    const query = req.params.query;
+
+    db.get(
+        `
+        SELECT 
+            users.id,
+            users.nickname,
+
+            saves.level,
+            saves.coins,
+            saves.playerSpeed,
+            saves.playerPower,
+            saves.attackCooldown,
+            saves.attackRange
+
+        FROM users
+
+        LEFT JOIN saves
+        ON users.id = saves.userId
+
+        WHERE users.id = ?
+        OR users.nickname = ?
+        `,
+        [query, query],
+        (err, row) => {
+
+            if(err){
+                console.log("SEARCH ERROR:", err);
+
+                return res.status(500).json({
+                    success:false,
+                    error:err.message
+                });
+            }
+
+            if(!row){
+
+                return res.json({
+                    success:false
+                });
+
+            }
+
+            res.json({
+                success:true,
+                ...row
+            });
+
+        }
+    );
+
+});
+
 // ================= SOCKET.IO =================
 
 const io = new Server(server,{
