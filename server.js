@@ -1,7 +1,6 @@
 const express = require("express");
 const path = require("path");
-const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
+const { Pool } = require("pg");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -28,64 +27,70 @@ app.get("/", (req, res) => {
 
 // ================= DATABASE =================
 
-const dbPath = path.resolve("./game.db");
-
-console.log("DATABASE PATH:", dbPath);
-console.log("DATABASE EXISTS:", fs.existsSync(dbPath));
-
-const db = new sqlite3.Database(dbPath, err => {
-    if (err) {
-        console.error(err.message);
-    } else {
-        console.log("SQLite connected");
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
     }
 });
 
-console.log("DATABASE PATH:", path.resolve("./game.db"));
-console.log("DATABASE EXISTS:", fs.existsSync("./game.db"));
-
-db.serialize(() => {
-
-    db.run(`
-    CREATE TABLE IF NOT EXISTS users(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nickname TEXT UNIQUE,
-        password TEXT
-    )
-    `);
-
-    db.run(`
-    CREATE TABLE IF NOT EXISTS saves(
-        userId INTEGER PRIMARY KEY,
-
-        coins INTEGER DEFAULT 0,
-        level INTEGER DEFAULT 1,
-
-        playerColor TEXT DEFAULT '#ff0000',
-
-        playerSpeed INTEGER DEFAULT 6,
-        playerPower INTEGER DEFAULT 100,
-
-        attackCooldown INTEGER DEFAULT 800,
-        attackRange INTEGER DEFAULT 50,
-
-        FOREIGN KEY(userId) REFERENCES users(id)
-    )
-    `);
-
-    db.run(`ALTER TABLE saves ADD COLUMN enemyPowerNerf REAL DEFAULT 1`);
-
-    db.run(`ALTER TABLE saves ADD COLUMN speedPrice INTEGER DEFAULT 100`);
-
-    db.run(`ALTER TABLE saves ADD COLUMN powerPrice INTEGER DEFAULT 200`);
-
-    db.run(`ALTER TABLE saves ADD COLUMN attackSpeedPrice INTEGER DEFAULT 250`);
-
-    db.run(`ALTER TABLE saves ADD COLUMN attackRangePrice INTEGER DEFAULT 250`);
-
-    db.run(`ALTER TABLE saves ADD COLUMN nerfPrice INTEGER DEFAULT 300`);
-
+pool.query("SELECT NOW()", (err, result) => {
+    if(err){
+        console.log("POSTGRES ERROR:", err);
+    } else {
+        console.log("POSTGRES CONNECTED:", result.rows[0]);
+    }
 });
+
+// ================= DATABASE INIT =================
+
+async function initDB(){
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS users(
+            id SERIAL PRIMARY KEY,
+            nickname TEXT UNIQUE,
+            password TEXT
+        )
+    `);
+
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS saves(
+            userId INTEGER PRIMARY KEY REFERENCES users(id),
+
+            coins INTEGER DEFAULT 0,
+            level INTEGER DEFAULT 1,
+
+            playerColor TEXT DEFAULT '#ff0000',
+
+            playerSpeed INTEGER DEFAULT 6,
+            playerPower INTEGER DEFAULT 100,
+
+            attackCooldown INTEGER DEFAULT 800,
+            attackRange INTEGER DEFAULT 50,
+
+            enemyPowerNerf REAL DEFAULT 1,
+
+            speedPrice INTEGER DEFAULT 100,
+            powerPrice INTEGER DEFAULT 200,
+            attackSpeedPrice INTEGER DEFAULT 250,
+            attackRangePrice INTEGER DEFAULT 250,
+            nerfPrice INTEGER DEFAULT 300,
+
+            invincible INTEGER DEFAULT 0,
+            invincibleTimer INTEGER DEFAULT 0,
+
+            freezeHit INTEGER DEFAULT 0,
+
+            shield INTEGER DEFAULT 0,
+            shieldTimer INTEGER DEFAULT 0
+        )
+    `);
+
+
+    console.log("POSTGRES TABLES READY");
+}
 
 // ================= AUTH =================
 
@@ -116,146 +121,155 @@ function auth(req,res,next){
 
 // ================= REGISTER =================
 
-app.post("/register", async (req, res) => {
-    const { nickname, password } = req.body;
+app.post("/register", async (req,res)=>{
 
-    if (!nickname || !password) {
-        return res.json({ error: "empty fields" });
+    const {nickname,password}=req.body;
+
+    if(!nickname || !password){
+        return res.json({error:"empty fields"});
     }
 
-    const hash = await bcrypt.hash(password, 10);
+    try{
 
-    db.run(
-        `INSERT INTO users(nickname,password) VALUES(?,?)`,
-        [nickname, hash],
-        function(err) {
-        
-            if (err) {
-                return res.json({ error: "user exists" });
-            }
-        
-            const userId = this.lastID;
-        
-            db.run(
-                `INSERT INTO saves(
-                    userId,
-                    coins,
-                    level,
-                    playerColor,
-                    playerSpeed,
-                    playerPower,
-                    attackCooldown,
-                    attackRange
-                )
-                VALUES(?,?,?,?,?,?,?,?)`,
-                [
-                    userId,
-                    0,
-                    1,
-                    "#ff0000",
-                    6,
-                    100,
-                    800,
-                    50
-                ],
-                err => {
-                
-                    if (err) {
-                        return res.status(500).json({
-                            error: err.message
-                        });
-                    }
-                
-                    res.json({
-                        success: true,
-                        id: userId,
-                        nickname
-                    });
-                
-                }
-            );
-        
-        }
-    );
+        const hash = await bcrypt.hash(password,10);
+
+        const user = await pool.query(
+            `
+            INSERT INTO users(nickname,password)
+            VALUES($1,$2)
+            RETURNING id
+            `,
+            [nickname,hash]
+        );
+
+        const id = user.rows[0].id;
+
+
+        await pool.query(
+            `
+            INSERT INTO saves(userId)
+            VALUES($1)
+            `,
+            [id]
+        );
+
+
+        res.json({
+            success:true,
+            id,
+            nickname
+        });
+
+
+    }catch(e){
+
+        console.log(e);
+
+        res.json({
+            error:"user exists"
+        });
+
+    }
+
 });
 
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req,res)=>{
 
-    const { nickname, password } = req.body;
+    const {nickname,password}=req.body;
 
-    db.get(
-        `SELECT * FROM users WHERE nickname=?`,
-        [nickname],
-        async (err, user) => {
+    try{
 
-            if (!user) {
-                return res.json({ error: "not user found" });
-            }
+        const result = await pool.query(
+            "SELECT * FROM users WHERE nickname=$1",
+            [nickname]
+        );
 
-            const ok = await bcrypt.compare(password, user.password);
+        const user = result.rows[0];
 
-            if (!ok) {
-                return res.json({ error: "wrong password" });
-            }
-
-            console.log("LOGIN USER:", user);
-
-            const token = jwt.sign(
-                { id: user.id },
-                SECRET,
-                { expiresIn: "7d" }
-            );
-
-            res.json({
-                token,
-                id: user.id,
-                nickname: user.nickname
+        if(!user){
+            return res.json({
+                error:"not user found"
             });
         }
-    );
+
+        const ok = await bcrypt.compare(
+            password,
+            user.password
+        );
+
+        if(!ok){
+            return res.json({
+                error:"wrong password"
+            });
+        }
+
+
+        const token = jwt.sign(
+            {id:user.id},
+            SECRET,
+            {expiresIn:"7d"}
+        );
+
+
+        res.json({
+            token,
+            id:user.id,
+            nickname:user.nickname
+        });
+
+
+    }catch(e){
+
+        console.log(e);
+
+        res.status(500).json({
+            error:e.message
+        });
+
+    }
+
 });
 
-app.delete("/account", auth, (req, res) => {
+app.delete("/account", auth, async(req,res)=>{
 
-    const userId = req.userId;
+    try{
 
-    db.serialize(() => {
-
-        db.run(
-            "DELETE FROM saves WHERE userId=?",
-            [userId]
+        await pool.query(
+            "DELETE FROM saves WHERE userid=$1",
+            [req.userId]
         );
 
-        db.run(
-            "DELETE FROM users WHERE id=?",
-            [userId],
-            function(err){
-
-                if(err){
-                    return res.status(500).json({
-                        error: err.message
-                    });
-                }
-
-                res.json({
-                    success:true
-                });
-
-            }
+        await pool.query(
+            "DELETE FROM users WHERE id=$1",
+            [req.userId]
         );
 
-    });
+
+        res.json({
+            success:true
+        });
+
+
+    }catch(e){
+
+        res.status(500).json({
+            error:e.message
+        });
+
+    }
 
 });
 
 // ================= SAVE =================
 
-app.post("/save", auth, (req, res) => {
+app.post("/save", auth, async(req,res)=>{
 
-    const data = req.body;
+    const data=req.body;
 
-    db.run(
+    try{
+
+        await pool.query(
         `
         INSERT INTO saves(
             userId,
@@ -266,118 +280,131 @@ app.post("/save", auth, (req, res) => {
             playerPower,
             attackCooldown,
             attackRange,
-
             enemyPowerNerf,
-
             speedPrice,
             powerPrice,
             attackSpeedPrice,
             attackRangePrice,
             nerfPrice,
-
             invincible,
             invincibleTimer,
             freezeHit,
             shield,
             shieldTimer
         )
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES(
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,
+            $10,$11,$12,$13,$14,$15,$16,
+            $17,$18,$19
+        )
+
         ON CONFLICT(userId)
         DO UPDATE SET
-            coins=excluded.coins,
-            level=excluded.level,
-            playerColor=excluded.playerColor,
-            playerSpeed=excluded.playerSpeed,
-            playerPower=excluded.playerPower,
-            attackCooldown=excluded.attackCooldown,
-            attackRange=excluded.attackRange
+
+            coins=EXCLUDED.coins,
+            level=EXCLUDED.level,
+            playerColor=EXCLUDED.playerColor,
+
+            playerSpeed=EXCLUDED.playerSpeed,
+            playerPower=EXCLUDED.playerPower,
+
+            attackCooldown=EXCLUDED.attackCooldown,
+            attackRange=EXCLUDED.attackRange,
+
+            enemyPowerNerf=EXCLUDED.enemyPowerNerf,
+
+            speedPrice=EXCLUDED.speedPrice,
+            powerPrice=EXCLUDED.powerPrice,
+            attackSpeedPrice=EXCLUDED.attackSpeedPrice,
+            attackRangePrice=EXCLUDED.attackRangePrice,
+            nerfPrice=EXCLUDED.nerfPrice,
+
+            invincible=EXCLUDED.invincible,
+            invincibleTimer=EXCLUDED.invincibleTimer,
+
+            freezeHit=EXCLUDED.freezeHit,
+
+            shield=EXCLUDED.shield,
+            shieldTimer=EXCLUDED.shieldTimer
         `,
         [
-        req.userId,
-        data.coins,
-        data.level,
-        data.playerColor,
-        data.playerSpeed,
-        data.playerPower,
-        data.attackCooldown,
-        data.attackRange,
-        data.enemyPowerNerf,
-        data.speedPrice,
-        data.powerPrice,
-        data.attackSpeedPrice,
-        data.attackRangePrice,
-        data.nerfPrice,
-        data.invincible ? 1 : 0,
-        data.invincibleTimer,
-        data.freezeHit ? 1 : 0,
-        data.shield ? 1 : 0,
-        data.shieldTimer
-        ],
-        err => {
+            req.userId,
+            data.coins,
+            data.level,
+            data.playerColor,
+            data.playerSpeed,
+            data.playerPower,
+            data.attackCooldown,
+            data.attackRange,
+            data.enemyPowerNerf,
+            data.speedPrice,
+            data.powerPrice,
+            data.attackSpeedPrice,
+            data.attackRangePrice,
+            data.nerfPrice,
+            data.invincible ? 1:0,
+            data.invincibleTimer,
+            data.freezeHit ? 1:0,
+            data.shield ? 1:0,
+            data.shieldTimer
+        ]);
 
-            if(err){
+        res.json({
+            success:true
+        });
 
-                return res.status(500).json({
-                    error:err.message
-                });
 
-            }
+    }catch(e){
 
-            res.json({
-                success:true
-            });
+        console.log(e);
 
-        }
-    );
+        res.status(500).json({
+            error:e.message
+        });
+
+    }
 
 });
 
 // ================= LOAD =================
 
-app.post("/load", auth, (req, res) => {
+app.post("/load", auth, async(req,res)=>{
 
-    db.get(
-        `
-        SELECT * FROM saves
-        WHERE userId=?
-        `,
-        [req.userId],
-        (err,row)=>{
+    try{
 
-            if(err){
+        const result = await pool.query(
+            "SELECT * FROM saves WHERE userid=$1",
+            [req.userId]
+        );
 
-                return res.status(500).json({
-                    error:err.message
-                });
 
-            }
+        if(result.rows.length===0){
 
-            if(!row){
-
-                return res.json({
-
-                    coins:0,
-                    level:1,
-
-                    playerColor:"#ff0000",
-
-                    playerSpeed:6,
-                    playerPower:100,
-
-                    attackCooldown:800,
-                    attackRange:50
-
-                });
-
-            }
-
-            res.json(row);
+            return res.json({
+                coins:0,
+                level:1,
+                playerColor:"#ff0000",
+                playerSpeed:6,
+                playerPower:100,
+                attackCooldown:800,
+                attackRange:50
+            });
 
         }
 
-    );
 
-}); 
+        res.json(result.rows[0]);
+
+
+    }catch(e){
+
+        res.status(500).json({
+            error:e.message
+        });
+
+    }
+
+});
 
 app.get("/player/:query", (req, res) => {
 
@@ -385,7 +412,7 @@ app.get("/player/:query", (req, res) => {
 
     console.log("SEARCH QUERY:", query);
 
-    db.get(
+    pool.query(
         `
         SELECT 
             users.id,
@@ -403,14 +430,15 @@ app.get("/player/:query", (req, res) => {
         LEFT JOIN saves
         ON users.id = saves.userId
 
-        WHERE users.id = ?
-        OR users.nickname = ?
+        WHERE users.id = $1
+        OR users.nickname = $2
         `,
         [Number(query) || -1, query],
-        (err, row) => {
+        (err, result) => {
 
-            console.log("SQL ERROR:", err);
-            console.log("SQL ROW:", row);
+            console.log("SQL ERROR:",err);
+            console.log("SQL ROW:",result.rows);
+
 
             if(err){
                 return res.status(500).json({
@@ -418,143 +446,150 @@ app.get("/player/:query", (req, res) => {
                     error:err.message
                 });
             }
-
+        
+        
+            const row = result.rows[0];
+        
+        
             if(!row){
                 return res.json({
                     success:false,
                     message:"No row"
                 });
             }
-
+        
+        
             res.json({
                 success:true,
                 ...row
             });
-
+        
         }
     );
 
 });
 
-app.get("/debug/users", (req,res)=>{
+app.get("/debug/users", async(req,res)=>{
 
-    db.all(
-        "SELECT id, nickname FROM users",
-        [],
-        (err, rows)=>{
+try{
 
-            if(err){
-                return res.json({
-                    error: err.message
-                });
-            }
+const result=await pool.query(
+"SELECT id,nickname FROM users"
+);
 
-            res.json(rows);
+res.json(result.rows);
 
-        }
-    );
+}catch(e){
+
+res.json({
+error:e.message
+});
+
+}
 
 });
 
-app.get("/debug/saves", (req,res)=>{
+app.get("/debug/saves", async(req,res)=>{
 
-    db.all(
-        "SELECT * FROM saves",
-        [],
-        (err, rows)=>{
+try{
 
-            if(err){
-                return res.json({
-                    error: err.message
-                });
-            }
+const result=await pool.query(
+"SELECT * FROM saves"
+);
 
-            res.json(rows);
+res.json(result.rows);
 
-        }
-    );
+}catch(e){
+
+res.json({
+error:e.message
+});
+
+}
 
 });
 
-app.get("/debug/player/:id", (req,res)=>{
+app.get("/debug/player/:id", async(req,res)=>{
 
-    db.get(
-        `
-        SELECT *
-        FROM users
-        WHERE id = ?
-        `,
-        [req.params.id],
-        (err, user)=>{
+try{
 
-            db.get(
-                `
-                SELECT *
-                FROM saves
-                WHERE userId = ?
-                `,
-                [req.params.id],
-                (err2, save)=>{
+const user = await pool.query(
+"SELECT * FROM users WHERE id=$1",
+[req.params.id]
+);
 
-                    res.json({
-                        user,
-                        save,
-                        err,
-                        err2
-                    });
 
-                }
-            );
+const save = await pool.query(
+"SELECT * FROM saves WHERE userid=$1",
+[req.params.id]
+);
 
-        }
-    );
+
+res.json({
+    user:user.rows[0],
+    save:save.rows[0]
+});
+
+
+}catch(e){
+
+res.json({
+    error:e.message
+});
+
+}
 
 });
 
-app.get("/fixsave/:id", (req,res)=>{
+app.post("/fixsave/:id", async (req,res)=>{
 
-    db.run(
-        `
-        INSERT INTO saves(
-            userId,
-            coins,
-            level,
-            playerColor,
-            playerSpeed,
-            playerPower,
-            attackCooldown,
-            attackRange
-        )
-        VALUES(?,?,?,?,?,?,?,?)
-        `,
-        [
-            Number(req.params.id),
-            0,
-            1,
-            "#ff0000",
-            6,
-            100,
-            800,
-            50
-        ],
-        function(err){
+    try{
 
-            if(err){
-                console.log("FIXSAVE ERROR:", err);
+        const result = await pool.query(
+            `
+            INSERT INTO saves(
+                userId,
+                coins,
+                level,
+                playerColor,
+                playerSpeed,
+                playerPower,
+                attackCooldown,
+                attackRange
+            )
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+            ON CONFLICT(userId) DO NOTHING
+            RETURNING userId
+            `,
+            [
+                Number(req.params.id),
+                0,
+                1,
+                "#ff0000",
+                6,
+                100,
+                800,
+                50
+            ]
+        );
 
-                return res.json({
-                    success:false,
-                    error:err.message
-                });
-            }
 
-            res.json({
-                success:true,
-                id:this.lastID
-            });
+        res.json({
+            success:true,
+            id:Number(req.params.id)
+        });
 
-        }
-    );
+
+    }catch(e){
+
+        console.log("FIXSAVE ERROR:",e);
+
+        res.json({
+            success:false,
+            error:e.message
+        });
+
+    }
 
 });
 
@@ -625,8 +660,14 @@ io.on("connection",socket=>{
 
 // ================= START =================
 
-server.listen(PORT,"0.0.0.0",()=>{
+initDB().then(()=>{
 
-    console.log(`Server running on port ${PORT}`);
+    server.listen(PORT,"0.0.0.0",()=>{
+
+        console.log(
+            `Server running on port ${PORT}`
+        );
+
+    });
 
 });
