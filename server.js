@@ -124,16 +124,52 @@ app.post("/register", async (req, res) => {
         `INSERT INTO users(nickname,password) VALUES(?,?)`,
         [nickname, hash],
         function(err) {
-
+        
             if (err) {
                 return res.json({ error: "user exists" });
             }
-
-            res.json({
-                success: true,
-                id: this.lastID,
-                nickname: nickname
-            });
+        
+            const userId = this.lastID;
+        
+            db.run(
+                `INSERT INTO saves(
+                    userId,
+                    coins,
+                    level,
+                    playerColor,
+                    playerSpeed,
+                    playerPower,
+                    attackCooldown,
+                    attackRange
+                )
+                VALUES(?,?,?,?,?,?,?,?)`,
+                [
+                    userId,
+                    0,
+                    1,
+                    "#ff0000",
+                    6,
+                    100,
+                    800,
+                    50
+                ],
+                err => {
+                
+                    if (err) {
+                        return res.status(500).json({
+                            error: err.message
+                        });
+                    }
+                
+                    res.json({
+                        success: true,
+                        id: userId,
+                        nickname
+                    });
+                
+                }
+            );
+        
         }
     );
 });
