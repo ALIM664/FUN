@@ -1872,6 +1872,11 @@ function draw(){
     ctx.restore();
 }
 
+window.addEventListener("load", async () => {
+    restoreLogin();
+    await loadGame();
+});
+
 // ================= LOOP =================
 let lastTime = performance.now();
 
