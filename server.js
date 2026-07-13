@@ -627,6 +627,41 @@ app.post("/fixsave/:id", async (req,res)=>{
 
 });
 
+app.get("/fixdatabase", async(req,res)=>{
+
+    try{
+
+        await pool.query(`
+            UPDATE saves
+            SET
+                enemypowernerf = 1,
+                speedprice = 100,
+                powerprice = 200,
+                attackspeedprice = 250,
+                attackrangeprice = 250,
+                nerfprice = 300,
+                invincibletimer = 0,
+                shieldtimer = 0
+            WHERE enemypowernerf IS NULL
+        `);
+
+        res.json({
+            success:true
+        });
+
+    }catch(e){
+
+        console.log(e);
+
+        res.json({
+            success:false,
+            error:e.message
+        });
+
+    }
+
+});
+
 // ================= SOCKET.IO =================
 
 const io = new Server(server,{
