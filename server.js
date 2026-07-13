@@ -378,7 +378,7 @@ app.post("/load", auth, async(req,res)=>{
         );
 
 
-        if(result.rows.length===0){
+        if(result.rows.length === 0){
 
             return res.json({
                 coins:0,
@@ -393,10 +393,44 @@ app.post("/load", auth, async(req,res)=>{
         }
 
 
-        res.json(result.rows[0]);
+        const row = result.rows[0];
+
+
+        res.json({
+
+            coins: row.coins,
+            level: row.level,
+
+            playerColor: row.playercolor,
+
+            playerSpeed: row.playerspeed,
+            playerPower: row.playerpower,
+
+            attackCooldown: row.attackcooldown,
+            attackRange: row.attackrange,
+
+            enemyPowerNerf: row.enemypowernerf,
+
+            speedPrice: row.speedprice,
+            powerPrice: row.powerprice,
+            attackSpeedPrice: row.attackspeedprice,
+            attackRangePrice: row.attackrangeprice,
+            nerfPrice: row.nerfprice,
+
+            invincible: row.invincible,
+            invincibleTimer: row.invincibletimer,
+
+            freezeHit: row.freezehit,
+
+            shield: row.shield,
+            shieldTimer: row.shieldtimer
+
+        });
 
 
     }catch(e){
+
+        console.log("LOAD ERROR:",e);
 
         res.status(500).json({
             error:e.message
