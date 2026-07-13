@@ -220,10 +220,6 @@ canvas {
     font-family: Arial, sans-serif;
 }
 
-.loaderText{
-    animation: pulse 1s infinite;
-}
-
 #startMenu button{
     transition: all 0.1s;
 }
@@ -236,10 +232,35 @@ canvas {
     transform: scale(0.9);
 }
 
-@keyframes pulse{
-    0%{opacity:0.3; transform:scale(1);}
-    50%{opacity:1; transform:scale(1.1);}
-    100%{opacity:0.3; transform:scale(1);}
+.loaderText{
+    animation: pulseRotate 3s ease-in-out infinite;
+}
+
+@keyframes pulseRotate{
+    0%{
+        opacity:0.1;
+        transform: scale(1) rotate(0deg);
+    }
+
+    25%{
+        opacity:1;
+        transform: scale(1.5) rotate(20deg);
+    }
+
+    50%{
+        opacity:0.1;
+        transform: scale(1) rotate(0deg);
+    }
+
+    75%{
+        opacity:1;
+        transform: scale(1.5) rotate(-20deg);
+    }
+
+    100%{
+        opacity:0.1;
+        transform: scale(1) rotate(0deg);
+    }
 }
 
 #menuBtn{
@@ -256,15 +277,32 @@ canvas {
     -webkit-text-stroke:yellow 1px;
 }
 
+.search{
+    position:fixed;
+    top:200px;
+    left:100px;
+}
 .searchResult{
-    margin-top:10px;
+    position:fixed;
+    top:400px;
+    left:100px;
     padding:12px;
     border:1px solid #555;
     border-radius:8px;
     background:#222;
     color:white;
-    min-height:80px;
-    min-width: 100px;
+    min-height:300px;
+    min-width: 200px;
+}
+.search p{
+    font-size:40px;
+    color: red;
+    -webkit-text-stroke: yellow 1px;
+    font-weight: 900;
+}
+#searchPlayerInput{
+    font-size:20px;
+    text-align:center;
 }
 
 </style>
@@ -290,7 +328,7 @@ canvas {
         font-weight:900;
         display:none;
     ">
-        Аккаунт
+        Account Info
     </button>
 
     <button id="deleteAccountBtn" onclick="deleteAccount()"
@@ -305,13 +343,17 @@ canvas {
         font-weight:900;
         display:none;
     ">
-        Удалить аккаунт
+        Delete Account
     </button>
 
-    <input id="searchPlayerInput" placeholder="Ник или ID">
-    <button onclick="searchPlayer()">Поиск</button>
+    <div class="search">
+        <p>Search Player:</p>
+        <br>
+        <input id="searchPlayerInput" placeholder="Nick or ID">
+        <button onclick="searchPlayer()">Search</button>
 
-    <div id="searchResult" class="searchResult"></div>
+        <div id="searchResult" class="searchResult"></div>
+    </div>
 
     <p>your color:</p>
 
@@ -332,13 +374,13 @@ canvas {
         "
     >
 
-    <p>Пароль:</p>
+    <p>Your password:</p>
 
     <input
         type="password"
         id="passwordInput"
         maxlength="30"
-        placeholder="Введите пароль"
+        placeholder="Enter password"
         style="
             width:220px;
             height:35px;
@@ -350,7 +392,7 @@ canvas {
     <div style="margin-top:5px;">
         <label style="cursor:pointer;">
             <input type="checkbox" id="showPassword">
-            Показать пароль
+            Show password
         </label>
     </div>
 
@@ -372,7 +414,7 @@ canvas {
                 color:white;
                 font-weight:900;
             ">
-            Создать аккаунт
+            Create Account
         </button>
     </div>
     <br>
@@ -389,7 +431,7 @@ canvas {
                 color:white;
                 font-weight:900;
             ">
-            Войти
+            Log in
         </button>
 
         <button id="logoutBtn" onclick="logoutAccount()"
@@ -403,7 +445,7 @@ canvas {
                 color:white;
                 font-weight:900;
             ">
-            Выйти
+            Log out
         </button>
     </div>
 </div>
@@ -466,7 +508,7 @@ canvas {
 
 <button id="fullBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
 
-<button id="menuBtn" onclick="backToMenu()">В главное меню</button>
+<button id="menuBtn" onclick="backToMenu()">Back to Main Menu</button>
 
 <div id="mobileControls">
     <button id="leftBtn">◀</button>
@@ -1208,8 +1250,12 @@ async function searchPlayer(){
         result.innerHTML = `
             <h3>${data.nickname}</h3>
             <p><b>ID:</b> ${data.id}</p>
-            <p><b>Уровень:</b> ${data.level}</p>
-            <p><b>Монеты:</b> ${data.coins}</p>
+            <p><b>Level:</b> ${data.level}</p>
+            <p><b>Coins:</b> ${data.coins}</p>
+            <p><b>Speed:</b> ${data.playerSpeed}</p>
+            <p><b>Power:</b> ${data.playerPower}</p>
+            <p><b>Attack Speed:</b> ${data.attackCooldown}</p>
+            <p><b>Attack Range:</b> ${data.attackRange}</p>
         `;
 
     }catch(err){
