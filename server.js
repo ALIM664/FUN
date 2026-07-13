@@ -28,7 +28,12 @@ app.get("/", (req, res) => {
 
 // ================= DATABASE =================
 
-const db = new sqlite3.Database("./game.db", err => {
+const dbPath = path.resolve("./game.db");
+
+console.log("DATABASE PATH:", dbPath);
+console.log("DATABASE EXISTS:", fs.existsSync(dbPath));
+
+const db = new sqlite3.Database(dbPath, err => {
     if (err) {
         console.error(err.message);
     } else {
