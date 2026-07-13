@@ -1221,10 +1221,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function searchPlayer(){
 
+    console.log("SEARCH CLICK");
+
     const query = document
         .getElementById("searchPlayerInput")
         .value
         .trim();
+
+    console.log("QUERY:", query);
 
     if(!query) return;
 
