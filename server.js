@@ -50,7 +50,8 @@ async function initDB(){
         CREATE TABLE IF NOT EXISTS users(
             id SERIAL PRIMARY KEY,
             nickname TEXT UNIQUE,
-            password TEXT
+            password TEXT,
+            clan INTEGER
         )
     `);
 
@@ -88,6 +89,31 @@ async function initDB(){
         )
     `);
 
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS clans(
+            id SERIAL PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            owner INTEGER REFERENCES users(id),
+            created TIMESTAMP DEFAULT NOW()
+        )
+    `);
+
+    await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS clan INTEGER
+    `);
+
+    await pool.query(`
+        ALTER TABLE users
+        DROP CONSTRAINT IF EXISTS users_clan_fkey
+    `);
+
+    await pool.query(`
+        ALTER TABLE users
+        ADD CONSTRAINT users_clan_fkey
+        FOREIGN KEY (clan)
+        REFERENCES clans(id)
+    `);
 
     console.log("POSTGRES TABLES READY");
 }
@@ -258,6 +284,101 @@ app.delete("/account", auth, async(req,res)=>{
         });
 
     }
+
+});
+
+app.post("/clan/create", auth, async (req, res) => {
+
+    const { name } = req.body;
+
+    try{
+
+        const user = await pool.query(
+            "SELECT clan FROM users WHERE id=$1",
+            [req.userId]
+        );
+
+        if(user.rows[0].clan){
+            return res.json({
+                success:false,
+                error:"Вы уже состоите в клане"
+            });
+        }
+
+        const clan = await pool.query(
+            "INSERT INTO clans(name,owner) VALUES($1,$2) RETURNING id",
+            [name, req.userId]
+        );
+
+        await pool.query(
+            "UPDATE users SET clan=$1 WHERE id=$2",
+            [clan.rows[0].id, req.userId]
+        );
+
+        res.json({success:true});
+
+    }catch(e){
+
+        res.json({
+            success:false,
+            error:e.message
+        });
+
+    }
+
+});
+
+app.get("/clans", async (req,res)=>{
+
+    const result = await pool.query(`
+        SELECT
+            clans.id,
+            clans.name,
+            COUNT(users.id) AS members
+        FROM clans
+        LEFT JOIN users
+        ON users.clan = clans.id
+        GROUP BY clans.id
+        ORDER BY members DESC
+    `);
+
+    res.json(result.rows);
+
+});
+
+app.post("/clan/join", auth, async(req,res)=>{
+
+    const user = await pool.query(
+        "SELECT clan FROM users WHERE id=$1",
+        [req.userId]
+    );
+
+    if(user.rows[0].clan){
+        return res.json({
+            success:false,
+            error:"Вы уже в клане"
+        });
+    }
+
+    await pool.query(
+        "UPDATE users SET clan=$1 WHERE id=$2",
+        [req.body.id, req.userId]
+    );
+
+    res.json({
+        success:true
+    });
+
+});
+
+app.post("/clan/leave", auth, async(req,res)=>{
+
+    await pool.query(
+        "UPDATE users SET clan=NULL WHERE id=$1",
+        [req.userId]
+    );
+
+    res.json({success:true});
 
 });
 
