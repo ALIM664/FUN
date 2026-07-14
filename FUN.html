@@ -305,6 +305,151 @@ canvas {
     text-align:center;
 }
 
+#clanPanel{
+    position:fixed;
+    top:40px;
+    right:40px;
+
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+
+    z-index:15000;
+}
+
+#clanPanel button{
+    width:220px;
+    height:55px;
+
+    background:#b00000;
+    color:white;
+
+    border:3px solid yellow;
+    border-radius:10px;
+
+    font-size:22px;
+    font-weight:bold;
+
+    cursor:pointer;
+
+    transition:.15s;
+}
+
+#clanPanel button:hover{
+    transform:scale(1.05);
+}
+
+#clanPanel button:active{
+    transform:scale(.95);
+}
+#createClanMenu{
+    position:fixed;
+
+    top:40px;
+    right:350px;
+
+    min-width:350px;
+
+    background:#222;
+    color:white;
+
+    padding:20px;
+
+    border:4px solid yellow;
+    border-radius:12px;
+
+    display:none;
+
+    z-index:16000;
+}
+.clanItem{
+    display:flex;
+
+    justify-content:space-between;
+    align-items:center;
+
+    margin-bottom:10px;
+
+    padding:10px;
+
+    background:#333;
+
+    border-radius:8px;
+}
+
+.clanItem button{
+    width:110px;
+    height:38px;
+
+    background:green;
+
+    color:white;
+
+    border:none;
+
+    border-radius:6px;
+
+    cursor:pointer;
+}
+#clanSidebar{
+    position:fixed;
+    top:0;
+    right:0;
+
+    min-width:320px;
+    height:100vh;
+
+    background:#202020;
+    border-left:4px solid yellow;
+
+    display:flex;
+    flex-direction:column;
+
+    padding:15px;
+    box-sizing:border-box;
+
+    z-index:12000;
+
+    overflow-y:auto;
+}
+
+#clanSidebar h2{
+    margin:0 0 15px;
+    color:yellow;
+    text-align:center;
+}
+
+#clanSidebar button{
+    height:45px;
+    margin-bottom:15px;
+
+    background:#c00000;
+    color:white;
+
+    border:3px solid yellow;
+    border-radius:8px;
+
+    font-size:18px;
+    cursor:pointer;
+}
+
+.clanItem{
+    background:#333;
+    border-radius:8px;
+    padding:10px;
+    margin-bottom:10px;
+}
+
+.clanItem b{
+    color:yellow;
+}
+
+.clanItem button{
+    width:100%;
+    margin-top:8px;
+    background:green;
+}
+
 </style>
 </head>
 
@@ -447,6 +592,30 @@ canvas {
             ">
             Log out
         </button>
+    </div>
+    <div id="createClanMenu" style="display:none;">
+
+        <h2>Создать клан</h2>
+
+        <input
+            id="clanNameInput"
+            placeholder="Название клана">
+
+        <button onclick="createClan()">
+            Создать
+        </button>
+
+    </div>
+    <div id="clanSidebar">
+
+        <h2>Кланы</h2>
+
+        <button onclick="openCreateClan()">
+            ➕ Создать клан
+        </button>
+
+        <div id="clanList"></div>
+
     </div>
 </div>
 
@@ -1272,6 +1441,109 @@ async function searchPlayer(){
     }
 }
 
+function openCreateClan(){
+    if (document.getElementById("createClanMenu").style.display === "none"){
+        document.getElementById("createClanMenu").style.display = "flex";
+    }else{
+        document.getElementById("createClanMenu").style.display = "none";
+    }
+
+}
+
+async function createClan(){
+
+    const token = localStorage.getItem("token");
+
+    if(!token){
+        alert("Войдите в аккаунт");
+        return;
+    }
+
+    const name =
+        document.getElementById("clanNameInput").value.trim();
+
+    if(!name){
+        alert("Введите название клана");
+        return;
+    }
+
+    const res = await fetch("/clan/create",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":token
+        },
+
+        body:JSON.stringify({
+            name
+        })
+
+    });
+
+    const data = await res.json();
+
+    alert(
+        data.success
+        ? "Клан создан!"
+        : data.error
+    );
+
+}
+
+async function loadClans(){
+
+    const res = await fetch("/clans");
+    const clans = await res.json();
+
+    const list = document.getElementById("clanList");
+
+    list.innerHTML = "";
+
+    clans.forEach(clan=>{
+
+        list.innerHTML += `
+        <div class="clanItem">
+            <b>${clan.name}</b><br>
+            Участников: ${clan.members}
+            <button onclick="joinClan(${clan.id})">
+                Вступить
+            </button>
+        </div>`;
+    });
+
+}
+
+async function joinClan(id){
+
+    const token =
+        localStorage.getItem("token");
+
+    const res = await fetch("/clan/join",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":token
+        },
+
+        body:JSON.stringify({
+            id:id
+        })
+
+    });
+
+    const data = await res.json();
+
+    alert(data.message);
+
+}
+
+loadClans();
+setInterval(loadClans, 3000);
+
 function toggleMusicLibrary(){
     const lib = document.getElementById("musicLibrary");
     lib.style.display = lib.style.display === "none" ? "block" : "none";
@@ -1526,6 +1798,23 @@ async function loadGame(){
         playerPower = data.playerPower;
         attackCooldown = data.attackCooldown;
         attackRange = data.attackRange;
+        enemyPowerNerf = data.enemyPowerNerf;
+
+        speedPrice = data.speedPrice;
+        powerPrice = data.powerPrice;
+        attackSpeedPrice = data.attackSpeedPrice;
+        attackRangePrice = data.attackRangePrice;
+        nerfPrice = data.nerfPrice;
+
+        invincible = data.invincible;
+        invincibleTimer = data.invincibleTimer;
+
+        freezeHit = data.freezeHit;
+
+        shield = data.shield;
+        shieldTimer = data.shieldTimer;
+        
+        updateShopPrices();
 
     } catch (err) {
         console.log("LOAD ERROR:", err);
@@ -1642,7 +1931,7 @@ function update(delta){
             if (e.y > window.innerHeight + 300) {
 
                 if(e.type === "jumper"){
-                    coins += 1000000;
+                    coins += 1;
                 }
                 else if(e.type === "fast"){
                     coins += 5;
@@ -1932,3 +2221,11 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
+♦♦♦BENprogrammer♦♦♦
+ben164tnt
+
+node server.js
+cloudflared tunnel --url http://localhost:3000
+
+https://fun-nbsn.onrender.com
