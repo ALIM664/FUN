@@ -396,7 +396,7 @@ canvas {
     top:0;
     right:0;
 
-    min-width:320px;
+    min-width:350px;
     height:100vh;
 
     background:#202020;
@@ -1505,11 +1505,27 @@ async function loadClans(){
 
         list.innerHTML += `
         <div class="clanItem">
+        
             <b>${clan.name}</b><br>
+        
             Участников: ${clan.members}
+        
+            <br><br>
+        
+            Игроки:
+            <br>
+        
+            ${clan.players
+                .filter(p => p)
+                .map(p => "• " + p)
+                .join("<br>")}
+        
+            <br><br>
+        
             <button onclick="joinClan(${clan.id})">
                 Вступить
             </button>
+        
         </div>`;
     });
 
