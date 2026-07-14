@@ -334,7 +334,8 @@ app.get("/clans", async (req,res)=>{
         SELECT
             clans.id,
             clans.name,
-            COUNT(users.id) AS members
+            COUNT(users.id) AS members,
+            ARRAY_AGG(users.nickname) AS players
         FROM clans
         LEFT JOIN users
         ON users.clan = clans.id
