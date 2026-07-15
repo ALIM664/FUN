@@ -717,12 +717,7 @@ app.post("/save", auth, async(req,res)=>{
             powerPrice,
             attackSpeedPrice,
             attackRangePrice,
-            nerfPrice,
-            invincible,
-            invincibleTimer,
-            freezeHit,
-            shield,
-            shieldTimer
+            nerfPrice
         )
         VALUES(
             $1,$2,$3,$4,$5,$6,$7,$8,$9,
