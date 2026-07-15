@@ -2017,15 +2017,29 @@ async function saveGame(){
                 "Authorization": token
             },
             body: JSON.stringify({
+
                 coins,
                 level,
+
                 playerColor,
+
                 playerSpeed: player.speed,
                 playerPower,
+
                 attackCooldown,
-                attackRange
+                attackRange,
+
+                enemyPowerNerf,
+
+                speedPrice,
+                powerPrice,
+                attackSpeedPrice,
+                attackRangePrice,
+                nerfPrice
+
             })
         });
+
     } catch (err) {
         console.log("SAVE ERROR:", err);
     }
@@ -2146,7 +2160,7 @@ function update(delta){
     }
 
     // ===== ENEMIES =====
-    if(currentMap !== 3){
+    if(currentMap < 3){
         const mainPlatform = mapPlatforms[currentMap][0];
 
         for(const e of enemies){
