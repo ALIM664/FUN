@@ -485,38 +485,56 @@ app.delete("/clan/delete", auth, async (req, res) => {
 
     if (!user.rows[0].clan) {
         return res.json({
-            success: false,
-            message: "Вы не состоите в клане."
+            success:false,
+            message:"Вы не состоите в клане."
         });
     }
 
     const clanId = user.rows[0].clan;
+
 
     const clan = await pool.query(
         "SELECT owner FROM clans WHERE id=$1",
         [clanId]
     );
 
+
     if (Number(clan.rows[0].owner) !== Number(req.userId)) {
         return res.json({
-            success: false,
-            message: "Удалить клан может только владелец."
+            success:false,
+            message:"Удалить клан может только владелец."
         });
     }
 
+
+    // вернуть 500 монет владельцу
+    await pool.query(
+        `
+        UPDATE saves
+        SET coins = coins + 500
+        WHERE userId=$1
+        `,
+        [req.userId]
+    );
+
+
+    // убрать игроков из клана
     await pool.query(
         "UPDATE users SET clan=NULL WHERE clan=$1",
         [clanId]
     );
 
+
+    // удалить клан
     await pool.query(
         "DELETE FROM clans WHERE id=$1",
         [clanId]
     );
 
+
     res.json({
-        success: true,
-        message: "Клан удалён."
+        success:true,
+        message:"Клан удалён. 500 монет возвращено."
     });
 
 });
