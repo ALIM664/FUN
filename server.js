@@ -471,7 +471,7 @@ app.get("/clan/me", auth, async (req, res) => {
         inClan: true,
         clanId: user.rows[0].clan,
         clanName: clan.rows[0].name,
-        owner: clan.rows[0].owner === req.userId
+        owner: Number(clan.rows[0].owner) === Number(req.userId)
     });
 
 });
