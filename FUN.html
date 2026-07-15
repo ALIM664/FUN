@@ -1525,14 +1525,17 @@ async function loadClans(){
         list.innerHTML += `
         <div class="clanItem">
         
-            <b>${clan.name}</b><br>
+            <b>${clan.name}</b>
+
+            <br><br>
         
             Участников: ${clan.members}
         
             <br><br>
         
             Игроки:
-            <br>
+
+            <br><br>
         
             ${clan.players
                 .filter(p => p)
