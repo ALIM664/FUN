@@ -744,15 +744,7 @@ app.post("/save", auth, async(req,res)=>{
             powerPrice=EXCLUDED.powerPrice,
             attackSpeedPrice=EXCLUDED.attackSpeedPrice,
             attackRangePrice=EXCLUDED.attackRangePrice,
-            nerfPrice=EXCLUDED.nerfPrice,
-
-            invincible=EXCLUDED.invincible,
-            invincibleTimer=EXCLUDED.invincibleTimer,
-
-            freezeHit=EXCLUDED.freezeHit,
-
-            shield=EXCLUDED.shield,
-            shieldTimer=EXCLUDED.shieldTimer
+            nerfPrice=EXCLUDED.nerfPrice
         `,
         [
             req.userId,
