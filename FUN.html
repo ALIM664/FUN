@@ -1640,7 +1640,18 @@ async function deleteClan(){
 
     alert(data.message);
 
-    updateClanUI();
+
+    if(data.success){
+
+        inClan = false;
+        clanOwner = false;
+
+        document.getElementById("clanRequests").innerHTML = "";
+
+        await updateClanUI();
+        await loadClans();
+
+    }
 
 }
 
