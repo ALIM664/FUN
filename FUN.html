@@ -762,6 +762,9 @@ let playerColor = "red";
 let playerNickname = "Player";
 let gameStarted = false;
 
+let inClan = false;
+let clanOwner = false;
+
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("orientationchange", resizeCanvas);
 resizeCanvas();
@@ -1272,6 +1275,7 @@ async function loginAccount() {
             alert("LOGIN SUCCESS");
             document.getElementById("accountInfoBtn").style.display = "block";
             document.getElementById("deleteAccountBtn").style.display = "block";
+            updateClanUI();
         } else {
             alert("NO TOKEN");
         }
@@ -1481,6 +1485,11 @@ async function createClan(){
         return;
     }
 
+    if(coins < 500){
+        alert("Нужно 500 монет");
+        return;
+    }
+
     const name =
         document.getElementById("clanNameInput").value.trim();
 
@@ -1488,6 +1497,7 @@ async function createClan(){
         alert("Введите название клана");
         return;
     }
+
 
     const res = await fetch("/clan/create",{
 
@@ -1504,13 +1514,23 @@ async function createClan(){
 
     });
 
+
     const data = await res.json();
 
-    alert(
-        data.success
-        ? "Клан создан!"
-        : data.error
-    );
+
+    if(data.success){
+
+        coins -= 500;
+
+        saveGame();
+
+        alert("Клан создан!");
+
+    }else{
+
+        alert(data.error);
+
+    }
 
 }
 
@@ -1547,9 +1567,11 @@ async function loadClans(){
         
             <br><br>
         
+            ${!inClan ? `
             <button onclick="joinClan(${clan.id})">
                 Вступить
             </button>
+            ` : ""}
         
         </div>`;
     });
@@ -1582,7 +1604,199 @@ async function joinClan(id){
 
 }
 
+async function leaveClan(){
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("/clan/leave",{
+        method:"POST",
+        headers:{
+            Authorization:token
+        }
+    });
+
+    const data = await res.json();
+
+    alert(data.message);
+
+    updateClanUI();
+
+}
+
+async function deleteClan(){
+
+    if(!confirm("Удалить клан?")) return;
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("/clan/delete",{
+        method:"DELETE",
+        headers:{
+            Authorization:token
+        }
+    });
+
+    const data = await res.json();
+
+    alert(data.message);
+
+    updateClanUI();
+
+}
+
+async function loadClanRequests(){
+
+    const box = document.getElementById("clanRequests");
+
+    if(!clanOwner){
+        box.innerHTML = "";
+        return;
+    }
+
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("/clan/requests",{
+        headers:{
+            Authorization:token
+        }
+    });
+
+
+    const requests = await res.json();
+
+
+    box.innerHTML = "";
+
+
+    requests.forEach(r=>{
+
+        box.innerHTML += `
+
+        <div>
+
+            ${r.nickname}
+
+            <button onclick="acceptClan(${r.id})">
+                ✅ Принять
+            </button>
+
+
+            <button onclick="rejectClan(${r.id})">
+                ❌ Отклонить
+            </button>
+
+        </div>
+
+        `;
+
+    });
+
+}
+
+async function acceptClan(id){
+
+await fetch("/clan/request/accept",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:localStorage.getItem("token")
+},
+
+body:JSON.stringify({
+id
+})
+
+});
+
+
+loadClanRequests();
+updateClanUI();
 loadClans();
+
+}
+async function rejectClan(id){
+
+await fetch("/clan/request/reject",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:localStorage.getItem("token")
+},
+
+body:JSON.stringify({
+id
+})
+
+});
+
+
+loadClanRequests();
+
+}
+
+async function updateClanUI(){
+
+    if(data.owner){
+
+        clanOwner=true;
+
+        loadClanRequests();
+
+    }
+
+    const token = localStorage.getItem("token");
+    if(!token) return;
+
+    const res = await fetch("/clan/me",{
+        headers:{
+            Authorization:token
+        }
+    });
+
+    const data = await res.json();
+
+    const btn = document.querySelector("#clanSidebar button");
+
+    if(!data.inClan){
+
+        inClan = false;
+
+        btn.textContent = "➕ Создать клан";
+        btn.onclick = openCreateClan;
+
+    }else{
+
+        inClan = true;
+
+        if(data.owner){
+
+            clanOwner = true;
+
+            btn.textContent = "🗑 Удалить клан";
+            btn.onclick = deleteClan;
+
+        }else{
+
+            clanOwner = false;
+
+            btn.textContent = "🚪 Покинуть клан";
+            btn.onclick = leaveClan;
+
+        }
+
+    }
+
+    loadClans();
+
+}
+
+loadClans();
+updateClanUI();
 setInterval(loadClans, 3000);
 
 function toggleMusicLibrary(){
