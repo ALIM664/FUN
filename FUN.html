@@ -155,6 +155,10 @@ canvas {
     -webkit-text-stroke:yellow 1px;
 }
 
+#startMenu #fullBtn{
+    right:30%;
+}
+
 #mapBtn{
     position:fixed;
     top:170px;
@@ -192,7 +196,7 @@ canvas {
 }
 
 #playBtn{
-    width:220px;
+    width:20%;
     height:70px;
 
     font-size:30px;
@@ -279,20 +283,21 @@ canvas {
 
 .search{
     position:fixed;
-    top:200px;
-    left:100px;
+    top:40%;
+    left:5%;
 }
 .searchResult{
     position:fixed;
-    top:400px;
-    left:100px;
+    top:40% + 0px;
+    left:5%;
     padding:12px;
     border:1px solid #555;
     border-radius:8px;
     background:#222;
     color:white;
     min-height:300px;
-    min-width: 200px;
+    max-width: 20%;
+    min-width: 10%;
 }
 .search .searchp{
     font-size:40px;
@@ -303,6 +308,7 @@ canvas {
 #searchPlayerInput{
     font-size:20px;
     text-align:center;
+    min-width: 15%;
 }
 
 #clanPanel{
@@ -346,7 +352,7 @@ canvas {
     position:fixed;
 
     top:40px;
-    right:350px;
+    right:33%;
 
     min-width:350px;
 
@@ -396,7 +402,7 @@ canvas {
     top:0;
     right:0;
 
-    min-width:350px;
+    min-width:30%;
     height:100vh;
 
     background:#202020;
@@ -431,6 +437,14 @@ canvas {
 
     font-size:18px;
     cursor:pointer;
+
+    transition: all 0.1s;
+}
+#clanSidebar button:hover{
+    transform: scale(1.05);
+}
+#clanSidebar button:active{
+    transform: scale(0.95);
 }
 
 .clanItem{
@@ -490,6 +504,8 @@ canvas {
     ">
         Delete Account
     </button>
+    
+    <button id="fullBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
 
     <div class="search">
         <p class="searchp">Search Player:</p>
@@ -543,14 +559,17 @@ canvas {
 
     <br><br>
 
-    <div style="display:flex; gap:10px;">
-        <button id="playBtn" onclick="startGame()">
+    <div style="display:flex; gap:10px; width: 35%;">
+        <button id="playBtn" onclick="startGame()"
+            style="
+                width: 50%;
+            ">
             PLAY
         </button>
 
         <button id="createAccountBtn" onclick="createAccount()"
             style="
-                width:220px;
+                width: 50%;
                 height:70px;
                 font-size:24px;
                 background:blue;
@@ -564,10 +583,10 @@ canvas {
     </div>
     <br>
 
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; width: 35%;">
         <button id="loginBtn" onclick="loginAccount()"
             style="
-                width:220px;
+                width: 50%;
                 height:60px;
                 font-size:24px;
                 background:green;
@@ -581,7 +600,7 @@ canvas {
 
         <button id="logoutBtn" onclick="logoutAccount()"
             style="
-                width:220px;
+                width: 50%;
                 height:60px;
                 font-size:24px;
                 background:#880000;
