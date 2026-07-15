@@ -1648,6 +1648,8 @@ async function loadClanRequests(){
 
     const box = document.getElementById("clanRequests");
 
+    if(!box) return;
+    
     if(!clanOwner){
         box.innerHTML = "";
         return;
@@ -1741,16 +1743,10 @@ loadClanRequests();
 
 async function updateClanUI(){
 
-    if(data.owner){
-
-        clanOwner=true;
-
-        loadClanRequests();
-
-    }
-
     const token = localStorage.getItem("token");
+
     if(!token) return;
+
 
     const res = await fetch("/clan/me",{
         headers:{
@@ -1758,13 +1754,19 @@ async function updateClanUI(){
         }
     });
 
+
     const data = await res.json();
 
+
     const btn = document.querySelector("#clanSidebar button");
+
 
     if(!data.inClan){
 
         inClan = false;
+        clanOwner = false;
+
+        document.getElementById("clanRequests").innerHTML = "";
 
         btn.textContent = "➕ Создать клан";
         btn.onclick = openCreateClan;
@@ -1773,6 +1775,7 @@ async function updateClanUI(){
 
         inClan = true;
 
+
         if(data.owner){
 
             clanOwner = true;
@@ -1780,9 +1783,16 @@ async function updateClanUI(){
             btn.textContent = "🗑 Удалить клан";
             btn.onclick = deleteClan;
 
+
+            // вот здесь появляются заявки
+            loadClanRequests();
+
+
         }else{
 
             clanOwner = false;
+
+            document.getElementById("clanRequests").innerHTML = "";
 
             btn.textContent = "🚪 Покинуть клан";
             btn.onclick = leaveClan;
@@ -1791,13 +1801,22 @@ async function updateClanUI(){
 
     }
 
+
     loadClans();
 
 }
 
 loadClans();
 updateClanUI();
-setInterval(loadClans, 3000);
+setInterval(()=>{
+
+    loadClans();
+
+    if(clanOwner){
+        loadClanRequests();
+    }
+
+},3000);
 
 function toggleMusicLibrary(){
     const lib = document.getElementById("musicLibrary");
