@@ -693,6 +693,18 @@ success:true
 
 });
 
+app.get("/admin/clear-clans", async(req,res)=>{
+
+    await pool.query("UPDATE users SET clan=NULL");
+    await pool.query("DELETE FROM clan_requests");
+    await pool.query("DELETE FROM clans");
+
+    res.json({
+        message:"Кланы удалены"
+    });
+
+});
+
 // ================= SAVE =================
 
 app.post("/save", auth, async(req,res)=>{
