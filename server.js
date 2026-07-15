@@ -115,6 +115,16 @@ async function initDB(){
         REFERENCES clans(id)
     `);
 
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS clan_requests(
+            id SERIAL PRIMARY KEY,
+            clan INTEGER REFERENCES clans(id) ON DELETE CASCADE,
+            userId INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            created TIMESTAMP DEFAULT NOW(),
+            UNIQUE(clan,userId)
+        )
+    `);
+
     console.log("POSTGRES TABLES READY");
 }
 
@@ -130,10 +140,6 @@ function auth(req,res,next){
         return res.status(401).json({
             error:"No token"
         });
-    }
-
-    if (!token) {
-        return res.status(401).json({ error: "No token" });
     }
 
     try {
@@ -349,37 +355,341 @@ app.get("/clans", async (req,res)=>{
 
 app.post("/clan/join", auth, async(req,res)=>{
 
+    const clanId = req.body.id;
+
+
     const user = await pool.query(
         "SELECT clan FROM users WHERE id=$1",
         [req.userId]
     );
 
+
     if(user.rows[0].clan){
+
         return res.json({
             success:false,
-            error:"Вы уже в клане"
+            message:"Вы уже в клане"
         });
+
     }
 
-    await pool.query(
-        "UPDATE users SET clan=$1 WHERE id=$2",
-        [req.body.id, req.userId]
+
+    const clan = await pool.query(
+        "SELECT id FROM clans WHERE id=$1",
+        [clanId]
     );
 
+
+    if(clan.rows.length === 0){
+
+        return res.json({
+            success:false,
+            message:"Клан не найден"
+        });
+
+    }
+
+
+    await pool.query(
+        `
+        INSERT INTO clan_requests(clan,userId)
+        VALUES($1,$2)
+        ON CONFLICT DO NOTHING
+        `,
+        [
+            clanId,
+            req.userId
+        ]
+    );
+
+
     res.json({
-        success:true
+        success:true,
+        message:"Заявка отправлена"
     });
+
 
 });
 
-app.post("/clan/leave", auth, async(req,res)=>{
+app.post("/clan/leave", auth, async (req, res) => {
+
+    const user = await pool.query(
+        "SELECT clan FROM users WHERE id=$1",
+        [req.userId]
+    );
+
+    if (!user.rows[0].clan) {
+        return res.json({
+            success: false,
+            message: "Вы не состоите в клане"
+        });
+    }
+
+    const clan = await pool.query(
+        "SELECT owner FROM clans WHERE id=$1",
+        [user.rows[0].clan]
+    );
+
+    if (Number(clan.rows[0].owner) === Number(req.userId)) {
+        return res.json({
+            success: false,
+            message: "Владелец должен удалить клан."
+        });
+    }
 
     await pool.query(
         "UPDATE users SET clan=NULL WHERE id=$1",
         [req.userId]
     );
 
-    res.json({success:true});
+    res.json({
+        success: true,
+        message: "Вы покинули клан."
+    });
+
+});
+
+app.get("/clan/me", auth, async (req, res) => {
+
+    const user = await pool.query(
+        "SELECT clan FROM users WHERE id=$1",
+        [req.userId]
+    );
+
+    if (!user.rows[0].clan) {
+        return res.json({
+            inClan: false
+        });
+    }
+
+    const clan = await pool.query(
+        "SELECT owner,name FROM clans WHERE id=$1",
+        [user.rows[0].clan]
+    );
+
+    res.json({
+        inClan: true,
+        clanId: user.rows[0].clan,
+        clanName: clan.rows[0].name,
+        owner: clan.rows[0].owner === req.userId
+    });
+
+});
+
+app.delete("/clan/delete", auth, async (req, res) => {
+
+    const user = await pool.query(
+        "SELECT clan FROM users WHERE id=$1",
+        [req.userId]
+    );
+
+    if (!user.rows[0].clan) {
+        return res.json({
+            success: false,
+            message: "Вы не состоите в клане."
+        });
+    }
+
+    const clanId = user.rows[0].clan;
+
+    const clan = await pool.query(
+        "SELECT owner FROM clans WHERE id=$1",
+        [clanId]
+    );
+
+    if (Number(clan.rows[0].owner) !== Number(req.userId)) {
+        return res.json({
+            success: false,
+            message: "Удалить клан может только владелец."
+        });
+    }
+
+    await pool.query(
+        "UPDATE users SET clan=NULL WHERE clan=$1",
+        [clanId]
+    );
+
+    await pool.query(
+        "DELETE FROM clans WHERE id=$1",
+        [clanId]
+    );
+
+    res.json({
+        success: true,
+        message: "Клан удалён."
+    });
+
+});
+
+app.get("/clan/requests", auth, async(req,res)=>{
+
+
+    const result = await pool.query(`
+
+        SELECT
+        clan_requests.id,
+        users.nickname,
+        users.id AS userid
+
+        FROM clan_requests
+
+        JOIN clans
+        ON clans.id = clan_requests.clan
+
+        JOIN users
+        ON users.id = clan_requests.userid
+
+        WHERE clans.owner=$1
+
+        `,
+        [
+            req.userId
+        ]
+    );
+
+
+    res.json(result.rows);
+
+
+});
+
+app.post("/clan/request/accept", auth, async(req,res)=>{
+
+
+const requestId = req.body.id;
+
+
+const request = await pool.query(
+`
+SELECT *
+FROM clan_requests
+WHERE id=$1
+`,
+[
+requestId
+]);
+
+
+if(request.rows.length===0){
+
+return res.json({
+success:false,
+message:"Заявка не найдена"
+});
+
+}
+
+
+
+const data=request.rows[0];
+
+
+
+const owner = await pool.query(
+`
+SELECT owner
+FROM clans
+WHERE id=$1
+`,
+[
+data.clan
+]);
+
+
+
+if(Number(owner.rows[0].owner)!==Number(req.userId)){
+
+return res.json({
+success:false,
+message:"Нет прав"
+});
+
+}
+
+
+
+await pool.query(
+`
+UPDATE users
+SET clan=$1
+WHERE id=$2
+`,
+[
+data.clan,
+data.userid
+]);
+
+
+
+await pool.query(
+`
+DELETE FROM clan_requests
+WHERE id=$1
+`,
+[
+requestId
+]);
+
+
+
+res.json({
+success:true
+});
+
+
+});
+
+app.post("/clan/request/reject", auth, async(req,res)=>{
+
+
+const request = await pool.query(`
+SELECT 
+clan_requests.clan,
+clans.owner
+
+FROM clan_requests
+
+JOIN clans
+ON clans.id = clan_requests.clan
+
+WHERE clan_requests.id=$1
+`,
+[
+req.body.id
+]);
+
+
+if(request.rows.length===0){
+    return res.json({
+        success:false,
+        message:"Заявка не найдена"
+    });
+}
+
+
+if(Number(request.rows[0].owner)!==Number(req.userId)){
+    return res.json({
+        success:false,
+        message:"Нет прав"
+    });
+}
+
+
+await pool.query(
+`
+DELETE FROM clan_requests
+WHERE id=$1
+`,
+[
+req.body.id
+]
+);
+
+
+res.json({
+success:true
+});
+
 
 });
 
