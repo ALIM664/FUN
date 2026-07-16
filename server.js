@@ -571,6 +571,27 @@ app.get("/clan/requests", auth, async(req,res)=>{
 
 });
 
+app.get("/debug/requests", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                clan_requests.*,
+                users.nickname,
+                clans.name AS clan_name
+            FROM clan_requests
+            JOIN users ON users.id = clan_requests.userId
+            JOIN clans ON clans.id = clan_requests.clan
+        `);
+
+        res.json(result.rows);
+
+    } catch (e) {
+        res.json({
+            error: e.message
+        });
+    }
+});
+
 app.post("/clan/request/accept", auth, async(req,res)=>{
 
 
