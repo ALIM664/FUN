@@ -340,12 +340,27 @@ app.get("/clans", async (req,res)=>{
         SELECT
             clans.id,
             clans.name,
+            clans.owner,
+
             COUNT(users.id) AS members,
-            ARRAY_AGG(users.nickname) AS players
+
+            COALESCE(
+                json_agg(
+                    json_build_object(
+                        'id', users.id,
+                        'nickname', users.nickname
+                    )
+                ) FILTER (WHERE users.id IS NOT NULL),
+                '[]'
+            ) AS players
+
         FROM clans
+
         LEFT JOIN users
         ON users.clan = clans.id
+
         GROUP BY clans.id
+
         ORDER BY members DESC
     `);
 
