@@ -458,7 +458,7 @@ canvas {
 }
 
 .clanItem b{
-    font-size: 25px;
+    font-size: 10px;
     color:#ff9900;
     -webkit-text-stroke: #ffff00 1px;
     font-weight: 900;
@@ -1275,6 +1275,12 @@ async function loginAccount() {
             currentUser.nickname = data.nickname;
             currentUser.id = data.id;
             currentUser.loggedIn = true;
+
+            socket.emit("setPlayerData", {
+                userId: currentUser.id,
+                nickname: currentUser.nickname
+            });
+        
             localStorage.setItem("token", data.token);
 
             localStorage.setItem("account", JSON.stringify({
