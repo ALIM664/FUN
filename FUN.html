@@ -636,7 +636,7 @@ canvas {
             ➕ Создать клан (500)
         </button>
 
-        <h3>Заявки:</h3>
+        <h3 id="clantext" style="display: none;">Заявки:</h3>
 
         <div id="clanRequests"></div>
 
@@ -1525,6 +1525,8 @@ async function createClan(){
     if(data.success){
 
         coins -= 500;
+        
+        document.getElementById("clantext").style.display = "block";
 
         saveGame();
 
@@ -1565,8 +1567,28 @@ async function loadClans(){
             <br><br>
         
             ${clan.players
-                .filter(p => p)
-                .map(p => "• " + p)
+                .map(p => {
+                
+                    if(p.id === clan.owner){
+                    
+                        return `
+                        <span style="
+                            color:yellow;
+                            font-weight:bold;
+                        ">
+                            👑 ${p.nickname}
+                        </span>
+                        `;
+                    
+                    }
+                
+                    return `
+                    <span>
+                        • ${p.nickname}
+                    </span>
+                    `;
+                
+                })
                 .join("<br>")}
         
             <br><br>
@@ -1651,6 +1673,8 @@ async function deleteClan(){
         clanOwner = false;
 
         document.getElementById("clanRequests").innerHTML = "";
+        
+        document.getElementById("clantext").style.display = "block";
 
         await updateClanUI();
         await loadClans();
