@@ -1205,38 +1205,58 @@ io.on("connection",socket=>{
 
     });
 
+    socket.on("setPlayerData", async(data)=>{
+
+        if(!data.userId) return;
+        
+        const result = await pool.query(
+            "SELECT clan FROM users WHERE id=$1",
+            [data.userId]
+        );
+    
+        if(result.rows.length){
+        
+            players[socket.id].userId = data.userId;
+            players[socket.id].nickname = data.nickname;
+            players[socket.id].clan = result.rows[0].clan;
+        
+            io.emit("players", players);
+        }
+    
+    });
+
     socket.on("pvpHit", (victimId) => {
 
         if (!players[victimId]) return;
-        
-        
+
+
         const attacker = players[socket.id];
         const victim = players[victimId];
-        
-        
+
+
         // запрет атаки союзников
         if(
             attacker.clan &&
             victim.clan &&
             attacker.clan === victim.clan
         ){
-        
+
             return;
-        
+
         }
-    
-    
+
+
         io.to(victimId).emit("damage", {
-        
+
             knockX:
                 attacker.x < victim.x
                 ? 25
                 : -25,
-        
+
             knockY:-15
-        
+
         });
-    
+
     });
 
     socket.on("disconnect",()=>{
