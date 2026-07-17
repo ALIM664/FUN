@@ -771,7 +771,12 @@ app.post("/save", auth, async(req,res)=>{
             powerPrice,
             attackSpeedPrice,
             attackRangePrice,
-            nerfPrice
+            nerfPrice,
+            invincible,
+            invincibleTimer,
+            freezeHit,
+            shield,
+            shieldTimer
         )
         VALUES(
             $1,$2,$3,$4,$5,$6,$7,$8,$9,
@@ -922,15 +927,25 @@ app.get("/player/:query", (req, res) => {
     pool.query(
         `
         SELECT 
-            users.id,
-            users.nickname,
-
-            saves.level,
-            saves.coins,
-            saves.playerSpeed,
-            saves.playerPower,
-            saves.attackCooldown,
-            saves.attackRange
+            userId,
+            coins,
+            level,
+            playerColor,
+            playerSpeed,
+            playerPower,
+            attackCooldown,
+            attackRange,
+            enemyPowerNerf,
+            speedPrice,
+            powerPrice,
+            attackSpeedPrice,
+            attackRangePrice,
+            nerfPrice,
+            invincible,
+            invincibleTimer,
+            freezeHit,
+            shield,
+            shieldTimer
 
         FROM users
 
@@ -1062,9 +1077,20 @@ app.post("/fixsave/:id", async (req,res)=>{
                 playerSpeed,
                 playerPower,
                 attackCooldown,
-                attackRange
+                attackRange,
+                enemyPowerNerf,
+                speedPrice,
+                powerPrice,
+                attackSpeedPrice,
+                attackRangePrice,
+                nerfPrice,
+                invincible,
+                invincibleTimer,
+                freezeHit,
+                shield,
+                shieldTimer
             )
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
             ON CONFLICT(userId) DO NOTHING
             RETURNING userId
             `,
@@ -1219,47 +1245,77 @@ io.on("connection",socket=>{
 
             players[socket.id].userId = data.userId;
             players[socket.id].nickname = data.nickname;
-            players[socket.id].clan = result.rows[0].clan;
+            players[socket.id].clan = result.rows[0].clan || null;
 
             io.emit("players", players);
         }
 
     });
 
-    socket.on("pvpHit", (victimId) => {
+    socket.on("pvpHit", async (victimId) => {
 
         if (!players[victimId]) return;
-
-
+        
         const attacker = players[socket.id];
         const victim = players[victimId];
-            
+        
         if(!attacker || !victim) return;
-
-
-        // запрет атаки союзников
-        if(
-            attacker.clan &&
-            victim.clan &&
-            attacker.clan === victim.clan
-        ){
-
-            return;
-
+        
+        
+        // получаем актуальные кланы из базы
+        let attackerClan = null;
+        let victimClan = null;
+        
+        
+        if(attacker.userId){
+        
+            const result = await pool.query(
+                "SELECT clan FROM users WHERE id=$1",
+                [attacker.userId]
+            );
+        
+            if(result.rows.length){
+                attackerClan = result.rows[0].clan;
+            }
+        
         }
-
-
+    
+    
+        if(victim.userId){
+        
+            const result = await pool.query(
+                "SELECT clan FROM users WHERE id=$1",
+                [victim.userId]
+            );
+        
+            if(result.rows.length){
+                victimClan = result.rows[0].clan;
+            }
+        
+        }
+    
+    
+        // запрет атаки игроков одного клана
+        if(
+            attackerClan &&
+            victimClan &&
+            Number(attackerClan) === Number(victimClan)
+        ){
+            return;
+        }
+    
+    
         io.to(victimId).emit("damage", {
-
+        
             knockX:
                 attacker.x < victim.x
                 ? 25
                 : -25,
-
+        
             knockY:-15
-
+        
         });
-
+    
     });
 
     socket.on("disconnect",()=>{
