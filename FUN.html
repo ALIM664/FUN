@@ -778,7 +778,6 @@ let inClan = false;
 let clanOwner = false;
 
 let canHitPlayer = true;
-let pvpHitCooldown = 0;
 
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("orientationchange", resizeCanvas);
@@ -2198,10 +2197,6 @@ async function loadGame(){
 function update(delta){
     if(!gameStarted) return;
 
-    if(pvpHitCooldown > 0){
-        pvpHitCooldown -= delta;
-    }
-
     // ===== PLAYER =====
     player.vx = 0;
 
@@ -2247,6 +2242,8 @@ function update(delta){
 
             const p = otherPlayers[id];
 
+            if(!p) continue;
+
             if (p.map !== 3) continue;
 
             // не бить игроков своего клана
@@ -2265,15 +2262,14 @@ function update(delta){
                 h: 40
             };
 
-            if (hit(hitbox, target) && pvpHitCooldown <= 0) {
+            if (hit(hitbox, target)) {
 
                 socket.emit("pvpHit", id);
-                        
-                pvpHitCooldown = 500; // задержка между ударами
-                        
+
+                // сразу выключаем удар
                 player.attackTime = 0;
                 player.attacking = false;
-                        
+
                 break;
             }
         }
