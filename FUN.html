@@ -1546,6 +1546,13 @@ async function createClan(){
 
         alert("Клан создан!");
 
+        socket.emit("setPlayerData", {
+            userId: currentUser.id,
+            nickname: currentUser.nickname
+        });
+
+        await updateClanUI();
+
     }else{
 
         alert(data.error);
@@ -1659,6 +1666,13 @@ async function leaveClan(){
 
     alert(data.message);
 
+    if (data.success) {
+        socket.emit("setPlayerData", {
+            userId: currentUser.id,
+            nickname: currentUser.nickname
+        });
+    }
+
     updateClanUI();
 
 }
@@ -1689,6 +1703,13 @@ async function deleteClan(){
         document.getElementById("clanRequests").innerHTML = "";
         
         document.getElementById("clantext").style.display = "block";
+
+        if (data.success) {
+            socket.emit("setPlayerData", {
+                userId: currentUser.id,
+                nickname: currentUser.nickname
+            });
+        }
 
         await updateClanUI();
         await loadClans();
@@ -1751,46 +1772,54 @@ async function loadClanRequests(){
 
 async function acceptClan(id){
 
-await fetch("/clan/request/accept",{
+    await fetch("/clan/request/accept",{
 
-method:"POST",
+        method:"POST",
+        
+        headers:{
+            "Content-Type":"application/json",
+            Authorization:localStorage.getItem("token")
+        },
 
-headers:{
-"Content-Type":"application/json",
-Authorization:localStorage.getItem("token")
-},
+        body:JSON.stringify({
+            id
+        })
 
-body:JSON.stringify({
-id
-})
+    });
 
-});
+    const data = await res.json();
 
+    if (data.success) {
+        socket.emit("setPlayerData", {
+            userId: currentUser.id,
+            nickname: currentUser.nickname
+        });
+    }
 
-loadClanRequests();
-updateClanUI();
-loadClans();
+    loadClanRequests();
+    updateClanUI();
+    loadClans();
 
-}
+    }
 async function rejectClan(id){
 
-await fetch("/clan/request/reject",{
+    await fetch("/clan/request/reject",{
 
-method:"POST",
+        method:"POST",
 
-headers:{
-"Content-Type":"application/json",
-Authorization:localStorage.getItem("token")
-},
+        headers:{
+            "Content-Type":"application/json",
+            Authorization:localStorage.getItem("token")
+        },
 
-body:JSON.stringify({
-id
-})
+        body:JSON.stringify({
+            id
+        })
 
-});
+    });
 
 
-loadClanRequests();
+    loadClanRequests();
 
 }
 
@@ -2213,6 +2242,15 @@ function update(delta){
 
             if (p.map !== 3) continue;
 
+            // не бить игроков своего клана
+            if(
+                playerClan &&
+                p.clan &&
+                Number(playerClan) === Number(p.clan)
+            ){
+                continue;
+            }
+
             const target = {
                 x: p.x,
                 y: p.y,
@@ -2273,12 +2311,15 @@ function update(delta){
 
                 if(e.type === "jumper"){
                     coins += 1;
+                    saveGame();
                 }
                 else if(e.type === "fast"){
                     coins += 5;
+                    saveGame();
                 }
                 else{
                     coins += 2;
+                    saveGame();
                 }
 
                 document.getElementById("coins").textContent = coins;
