@@ -745,6 +745,7 @@ socket.on("damage", (data) => {
 
     player.knockX = data.knockX * 3;
     player.knockY = data.knockY * 2;
+    console.log("DAMAGE");
 
 });
 
@@ -778,6 +779,7 @@ let inClan = false;
 let clanOwner = false;
 
 let canHitPlayer = true;
+let pvpHitCooldown = 0;
 
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("orientationchange", resizeCanvas);
@@ -2197,6 +2199,12 @@ async function loadGame(){
 function update(delta){
     if(!gameStarted) return;
 
+    if(pvpHitCooldown > 0){
+        pvpHitCooldown -= delta;
+    }
+
+    if(!gameStarted) return;
+
     // ===== PLAYER =====
     player.vx = 0;
 
@@ -2225,53 +2233,49 @@ function update(delta){
     if(player.attackTime > 0) player.attackTime -= delta;
     else player.attacking = false;
 
-    if (currentMap === 3 && player.attacking) {
+    if (currentMap === 3 && player.attacking && pvpHitCooldown <= 0) {
 
         const hitbox = {
             x: player.dir === 1
                 ? player.x + player.w
                 : player.x - attackRange,
+
             y: player.y,
             w: attackRange,
             h: player.h
         };
 
+
         for (const id in otherPlayers) {
 
-            if (id === socket.id) continue;
+            if(id === socket.id) continue;
 
             const p = otherPlayers[id];
 
-            if(!p) continue;
+            if(p.map !== 3) continue;
 
-            if (p.map !== 3) continue;
-
-            // не бить игроков своего клана
-            if(
-                playerClan &&
-                p.clan &&
-                Number(playerClan) === Number(p.clan)
-            ){
-                continue;
-            }
 
             const target = {
-                x: p.x,
-                y: p.y,
-                w: 40,
-                h: 40
+                x:p.x,
+                y:p.y,
+                w:40,
+                h:40
             };
 
-            if (hit(hitbox, target)) {
+
+            if(hit(hitbox,target)){
 
                 socket.emit("pvpHit", id);
 
-                // сразу выключаем удар
+                // защита от повторных ударов
+                pvpHitCooldown = 300;
+
                 player.attackTime = 0;
                 player.attacking = false;
 
                 break;
             }
+
         }
     }
 
@@ -2536,12 +2540,12 @@ function draw(){
         const p = otherPlayers[id];
         if (p.map !== currentMap) continue;
 
+        ctx.globalAlpha = currentMap === 3 ? 1 : 0.3;
+
         ctx.fillStyle = "white";
         ctx.font = "bold 18px Arial";
         ctx.textAlign = "center";
         ctx.fillText(p.nickname, p.x + 20, p.y - 10);
-
-        ctx.globalAlpha = currentMap === 3 ? 1 : 0.4;
 
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, 40, 40);
