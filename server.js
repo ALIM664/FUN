@@ -1172,6 +1172,7 @@ const io = new Server(server,{
 });
 
 const players = {};
+const pvpCooldown = {};
 
 io.on("connection",socket=>{
 
@@ -1251,8 +1252,6 @@ io.on("connection",socket=>{
         }
 
     });
-
-    const pvpCooldown = {};
 
     socket.on("pvpHit", (victimId) => {
     
