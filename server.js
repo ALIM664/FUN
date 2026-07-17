@@ -1252,59 +1252,51 @@ io.on("connection",socket=>{
 
     });
 
-    socket.on("pvpHit", async (victimId) => {
+    const pvpCooldown = {};
 
-        if (!players[victimId]) return;
-        
+    socket.on("pvpHit", (victimId) => {
+    
+        const now = Date.now();
+    
+        // защита от спама ударами
+        if(
+            pvpCooldown[socket.id] &&
+            now - pvpCooldown[socket.id] < 300
+        ){
+            return;
+        }
+    
+        pvpCooldown[socket.id] = now;
+    
+    
         const attacker = players[socket.id];
         const victim = players[victimId];
-        
+    
+    
         if(!attacker || !victim) return;
-        
-        
-        // получаем актуальные кланы из базы
-        let attackerClan = null;
-        let victimClan = null;
-        
-        
-        if(attacker.userId){
-        
-            const result = await pool.query(
-                "SELECT clan FROM users WHERE id=$1",
-                [attacker.userId]
-            );
-        
-            if(result.rows.length){
-                attackerClan = result.rows[0].clan;
-            }
-        
+    
+    
+        // нельзя бить себя
+        if(socket.id === victimId) return;
+    
+    
+        // проверяем карту
+        if(attacker.map !== 3 || victim.map !== 3){
+            return;
         }
     
     
-        if(victim.userId){
-        
-            const result = await pool.query(
-                "SELECT clan FROM users WHERE id=$1",
-                [victim.userId]
-            );
-        
-            if(result.rows.length){
-                victimClan = result.rows[0].clan;
-            }
-        
-        }
-    
-    
-        // запрет атаки игроков одного клана
+        // нельзя бить свой клан
         if(
-            attackerClan &&
-            victimClan &&
-            Number(attackerClan) === Number(victimClan)
+            attacker.clan &&
+            victim.clan &&
+            Number(attacker.clan) === Number(victim.clan)
         ){
             return;
         }
     
     
+        // отправляем урон
         io.to(victimId).emit("damage", {
         
             knockX:
@@ -1312,7 +1304,7 @@ io.on("connection",socket=>{
                 ? 25
                 : -25,
         
-            knockY:-15
+            knockY: -15
         
         });
     
