@@ -774,6 +774,17 @@ socket.on("damage", (data) => {
     console.log("DAMAGE");
 
 });
+socket.on("pointsReward", data => {
+
+    points += data.amount;
+
+    document.getElementById("points").textContent = points;
+
+    updatePlayerTitle();
+
+    saveGame();
+
+});
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -800,6 +811,7 @@ document.addEventListener("keyup", e => {
 let playerColor = "red";
 let playerNickname = "Player";
 let playerTitle = "beginner lvl.1";
+let playerPoint = 1;
 let gameStarted = false;
 
 let inClan = false;
@@ -2161,6 +2173,12 @@ function updateMenuTitle(){
 
     document.getElementById("stats2").textContent =
         playerTitle;
+
+}
+
+function playerDeath(killerId){
+
+    socket.emit("playerDeath", killerId);
 
 }
 
