@@ -176,7 +176,7 @@ canvas {
 #startMenu{
     position:fixed;
     inset:0;
-    background: linear-gradient(10deg, #000000, #222222);
+    background: linear-gradient(10deg, #000000, #000000, #444444);
     color:white;
 
     display:flex;
@@ -196,19 +196,70 @@ canvas {
 }
 
 #playBtn{
-    width:20%;
-    height:70px;
+    width:50%;
+    aspect-ratio: 1000 / 365;
 
-    font-size:30px;
-
-    background:red;
-
-    border:4px solid yellow;
-    border-radius:10px;
+    font-size: 2cqw;
 
     color: orange;
     -webkit-text-stroke: yellow 1px;
     font-weight: 900;
+    text-shadow: #aa5500 0px 3px;
+
+    background-image: url("funpng/Component 1.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #00000000;
+    border: none;
+}
+#createAccountBtn{
+    width:50%;
+    aspect-ratio: 1000 / 365;
+
+    font-size: 1.5cqw;
+
+    color: aqua;
+    text-shadow: #0077ff 0px 2px;
+
+    background-image: url("funpng/Component 2.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #00000000;
+    border: none;
+}
+#loginBtn{
+    width:50%;
+    aspect-ratio: 1000 / 365;
+
+    font-size: 1.5cqw;
+
+    color: lime;
+    text-shadow: #00cc00 0px 2px;
+    
+    background-image: url("funpng/Component 3.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #00000000;
+    border: none;
+}
+#logoutBtn{
+    width:50%;
+    aspect-ratio: 1000 / 365;
+
+    font-size: 1.5cqw;
+
+    color: red;
+    text-shadow: #cc0000 0px 2px;
+    
+    background-image: url("funpng/Component 4.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #00000000;
+    border: none;
 }
 
 #loadingScreen{
@@ -571,55 +622,22 @@ canvas {
     <br><br>
 
     <div style="display:flex; gap:10px; width: 35%;">
-        <button id="playBtn" onclick="startGame()"
-            style="
-                width: 50%;
-            ">
+        <button id="playBtn" onclick="startGame()">
             PLAY
         </button>
 
-        <button id="createAccountBtn" onclick="createAccount()"
-            style="
-                width: 50%;
-                height:70px;
-                font-size:24px;
-                background:blue;
-                border:4px solid cyan;
-                border-radius:10px;
-                color:white;
-                font-weight:900;
-            ">
+        <button id="createAccountBtn" onclick="createAccount()">
             Create Account
         </button>
     </div>
     <br>
 
     <div style="display:flex; gap:10px; width: 35%;">
-        <button id="loginBtn" onclick="loginAccount()"
-            style="
-                width: 50%;
-                height:60px;
-                font-size:24px;
-                background:green;
-                border:4px solid lime;
-                border-radius:10px;
-                color:white;
-                font-weight:900;
-            ">
+        <button id="loginBtn" onclick="loginAccount()">
             Log in
         </button>
 
-        <button id="logoutBtn" onclick="logoutAccount()"
-            style="
-                width: 50%;
-                height:60px;
-                font-size:24px;
-                background:#880000;
-                border:4px solid red;
-                border-radius:10px;
-                color:white;
-                font-weight:900;
-            ">
+        <button id="logoutBtn" onclick="logoutAccount()">
             Log out
         </button>
     </div>
@@ -657,6 +675,7 @@ canvas {
 <button id="shopBtn" onclick="toggleShop()">🛒 Shop</button>
 <div id="shop">
     💰:<span id="coins">0</span>
+    ⭐:<span id="points">0</span>
     Level:<span id="level">1</span>
 
     <button id="speedBtn" onclick="buySpeed()">+ Speed (100)</button>
@@ -905,6 +924,7 @@ const player = {
 };
 
 let coins = 0;
+let points = 0;
 
 let playerPower = 100;
 let attackCooldown = 800;
@@ -1472,6 +1492,7 @@ async function searchPlayer(){
             <h3>${data.nickname}</h3>
             <p><b>ID:</b> ${data.id}</p>
             <p><b>Level:</b> ${data.level}</p>
+            <p><b>Points:</b> ${data.points}</p>
             <p><b>Coins:</b> ${data.coins}</p>
             <p><b>Speed:</b> ${data.playerspeed}</p>
             <p><b>Power:</b> ${data.playerpower}</p>
@@ -1653,6 +1674,28 @@ async function joinClan(id){
 
     alert(data.message);
 
+}
+
+function clanDailyReward(){
+
+    if(!inClan) return;
+
+    const today = new Date().toDateString();
+
+    const lastReward =
+        localStorage.getItem("clanDailyReward");
+
+    if(lastReward === today) return;
+
+    points += 50;
+
+    localStorage.setItem("clanDailyReward", today);
+
+    document.getElementById("points").textContent = points;
+
+    saveGame();
+
+    alert("⭐ Вы получили 50 очков за участие в клане!");
 }
 
 async function leaveClan(){
@@ -1924,6 +1967,9 @@ function addLevel(){
     level++;
     document.getElementById("level").textContent = level;
 
+    points += 50;
+    document.getElementById("points").textContent = points;
+
     if(level % 5 === 0){
         spawnRandomEnemy();
     }
@@ -2124,6 +2170,7 @@ async function saveGame(){
             body: JSON.stringify({
 
                 coins,
+                points,
                 level,
 
                 playerColor,
@@ -2193,6 +2240,7 @@ async function loadGame(){
     } catch (err) {
         console.log("LOAD ERROR:", err);
     }
+    clanDailyReward();
 }
 
 // ================= UPDATE =================
@@ -2321,14 +2369,17 @@ function update(delta){
 
                 if(e.type === "jumper"){
                     coins += 1;
+                    points += 5;
                     saveGame();
                 }
                 else if(e.type === "fast"){
                     coins += 5;
+                    points += 25;
                     saveGame();
                 }
                 else{
                     coins += 2;
+                    points += 10;
                     saveGame();
                 }
 
