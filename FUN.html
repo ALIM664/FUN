@@ -2213,6 +2213,7 @@ async function loadGame(){
         const data = await res.json();
 
         coins = data.coins;
+        points = data.points;
         level = data.level;
         playerColor = data.playerColor;
         player.speed = data.playerSpeed;
@@ -2234,13 +2235,16 @@ async function loadGame(){
 
         shield = data.shield;
         shieldTimer = data.shieldTimer;
-        
+
+        document.getElementById("coins").textContent = coins;
+        document.getElementById("points").textContent = points;
+        document.getElementById("level").textContent = level;
+
         updateShopPrices();
 
-    } catch (err) {
+    } catch(err){
         console.log("LOAD ERROR:", err);
     }
-    clanDailyReward();
 }
 
 // ================= UPDATE =================
@@ -2629,8 +2633,6 @@ function loop(time){
 
     requestAnimationFrame(loop);
 }
-
-window.addEventListener("load", loadGame);
 
 window.addEventListener("load", () => {
 
