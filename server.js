@@ -61,6 +61,7 @@ async function initDB(){
             userId INTEGER PRIMARY KEY REFERENCES users(id),
 
             coins INTEGER DEFAULT 0,
+            points INTEGER DEFAULT 0,
             level INTEGER DEFAULT 1,
 
             playerColor TEXT DEFAULT '#ff0000',
@@ -125,6 +126,11 @@ async function initDB(){
         )
     `);
 
+    await pool.query(`
+        ALTER TABLE saves
+        ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0
+    `);
+
     console.log("POSTGRES TABLES READY");
 }
 
@@ -179,8 +185,13 @@ app.post("/register", async (req,res)=>{
 
         await pool.query(
             `
-            INSERT INTO saves(userId)
-            VALUES($1)
+            INSERT INTO saves(
+                userId,
+                coins,
+                points,
+                level
+            )
+            VALUES($1,0,0,1)
             `,
             [id]
         );
@@ -760,6 +771,7 @@ app.post("/save", auth, async(req,res)=>{
         INSERT INTO saves(
             userId,
             coins,
+            points,
             level,
             playerColor,
             playerSpeed,
@@ -781,13 +793,14 @@ app.post("/save", auth, async(req,res)=>{
         VALUES(
             $1,$2,$3,$4,$5,$6,$7,$8,$9,
             $10,$11,$12,$13,$14,$15,$16,
-            $17,$18,$19
+            $17,$18,$19,$20
         )
 
         ON CONFLICT(userId)
         DO UPDATE SET
 
             coins=EXCLUDED.coins,
+            points=EXCLUDED.points,
             level=EXCLUDED.level,
             playerColor=EXCLUDED.playerColor,
 
@@ -808,6 +821,7 @@ app.post("/save", auth, async(req,res)=>{
         [
             req.userId,
             data.coins,
+            data.points,
             data.level,
             data.playerColor,
             data.playerSpeed,
@@ -877,6 +891,7 @@ app.post("/load", auth, async(req,res)=>{
         res.json({
 
             coins: row.coins,
+            points: row.points,
             level: row.level,
 
             playerColor: row.playercolor,
@@ -929,6 +944,7 @@ app.get("/player/:query", (req, res) => {
         SELECT 
             userId,
             coins,
+            points,
             level,
             playerColor,
             playerSpeed,
@@ -1072,6 +1088,7 @@ app.post("/fixsave/:id", async (req,res)=>{
             INSERT INTO saves(
                 userId,
                 coins,
+                points,
                 level,
                 playerColor,
                 playerSpeed,
@@ -1090,12 +1107,13 @@ app.post("/fixsave/:id", async (req,res)=>{
                 shield,
                 shieldTimer
             )
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
             ON CONFLICT(userId) DO NOTHING
             RETURNING userId
             `,
             [
                 Number(req.params.id),
+                0,
                 0,
                 1,
                 "#ff0000",
