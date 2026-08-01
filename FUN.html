@@ -1235,7 +1235,6 @@ function startGame(){
     gameStarted = true;
 
     updateShopPrices();
-    loadGame();
     requestAnimationFrame(loop);
 }
 
@@ -2385,6 +2384,7 @@ function update(delta){
                 }
 
                 document.getElementById("coins").textContent = coins;
+                document.getElementById("points").textContent = points;
                 saveGame();
 
                 e.x = e.startX;
