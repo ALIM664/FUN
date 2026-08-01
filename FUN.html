@@ -2444,8 +2444,14 @@ function update(delta){
 
                 if(hit(hitbox, e) && !e.invulnerable){
 
-                    e.knockX = player.dir * e.power * 1.1;
-                    e.knockY = -e.power * 0.5;
+                    let knockMultiplier = 1;
+
+                    if(e.type === "fast"){
+                        knockMultiplier = 4;
+                    }
+
+                    e.knockX = player.dir * e.power * 1.1 * knockMultiplier;
+                    e.knockY = -e.power * 0.3 * knockMultiplier;
 
                     player.attackTime = 0;
                 }
