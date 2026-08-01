@@ -944,33 +944,33 @@ app.get("/player/:query", (req, res) => {
         SELECT
             users.id,
             users.nickname,
-            
+
             saves.userId,
             saves.coins,
             saves.points,
             saves.level,
-            
+
             saves.playerColor,
             saves.playerSpeed,
             saves.playerPower,
             saves.attackCooldown,
             saves.attackRange,
             saves.enemyPowerNerf,
-            
+
             saves.speedPrice,
             saves.powerPrice,
             saves.attackSpeedPrice,
             saves.attackRangePrice,
             saves.nerfPrice,
-            
+
             saves.invincible,
             saves.invincibleTimer,
             saves.freezeHit,
             saves.shield,
             saves.shieldTimer
-            
+
         FROM users
-            
+
         LEFT JOIN saves
         ON users.id = saves.userId
 
@@ -1213,6 +1213,8 @@ io.on("connection",socket=>{
         userId:null,
         clan:null,
 
+        playerPoint:1,
+
         map:0
 
     };
@@ -1258,23 +1260,15 @@ io.on("connection",socket=>{
     });
 
     socket.on("setPlayerData", async(data)=>{
-
+    
         if(!data.userId) return;
-
-        const result = await pool.query(
-            "SELECT clan FROM users WHERE id=$1",
-            [data.userId]
-        );
-
-        if(result.rows.length){
-
-            players[socket.id].userId = data.userId;
-            players[socket.id].nickname = data.nickname;
-            players[socket.id].clan = result.rows[0].clan || null;
-
-            io.emit("players", players);
-        }
-
+    
+        players[socket.id].userId = data.userId;
+        players[socket.id].nickname = data.nickname;
+    
+        players[socket.id].playerPoint =
+            data.playerPoint || 1;
+    
     });
 
     socket.on("pvpHit", (victimId) => {
@@ -1331,6 +1325,43 @@ io.on("connection",socket=>{
         
         });
     
+    });
+
+    socket.on("playerDeath", async (killerId)=>{
+
+        const victim = players[socket.id];
+        const killer = players[killerId];
+
+        if(!victim || !killer) return;
+
+        if(!killer.userId) return;
+
+
+        const reward = 5 * (victim.playerPoint || 1);
+
+
+        players[killerId].points =
+            (players[killerId].points || 0) + reward;
+
+
+        await pool.query(
+            `
+            UPDATE saves
+            SET points = points + $1
+            WHERE userId = $2
+            `,
+            [
+                reward,
+                killer.userId
+            ]
+        );
+
+
+        io.to(killerId).emit("pointsReward",{
+            amount: reward
+        });
+
+
     });
 
     socket.on("disconnect",()=>{
