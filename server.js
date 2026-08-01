@@ -941,30 +941,36 @@ app.get("/player/:query", (req, res) => {
 
     pool.query(
         `
-        SELECT 
-            userId,
-            coins,
-            points,
-            level,
-            playerColor,
-            playerSpeed,
-            playerPower,
-            attackCooldown,
-            attackRange,
-            enemyPowerNerf,
-            speedPrice,
-            powerPrice,
-            attackSpeedPrice,
-            attackRangePrice,
-            nerfPrice,
-            invincible,
-            invincibleTimer,
-            freezeHit,
-            shield,
-            shieldTimer
-
+        SELECT
+            users.id,
+            users.nickname,
+            
+            saves.userId,
+            saves.coins,
+            saves.points,
+            saves.level,
+            
+            saves.playerColor,
+            saves.playerSpeed,
+            saves.playerPower,
+            saves.attackCooldown,
+            saves.attackRange,
+            saves.enemyPowerNerf,
+            
+            saves.speedPrice,
+            saves.powerPrice,
+            saves.attackSpeedPrice,
+            saves.attackRangePrice,
+            saves.nerfPrice,
+            
+            saves.invincible,
+            saves.invincibleTimer,
+            saves.freezeHit,
+            saves.shield,
+            saves.shieldTimer
+            
         FROM users
-
+            
         LEFT JOIN saves
         ON users.id = saves.userId
 
