@@ -526,6 +526,11 @@ canvas {
     font-weight:bold;
 }
 
+#stats2{
+    color: #ffff00;
+    font-size: 200%;
+}
+
 </style>
 </head>
 
@@ -581,6 +586,8 @@ canvas {
     <p>your color:</p>
 
     <input type="color" id="playerColorPicker" value="#ff0000">
+        
+    <span id="stats2"></span>
 
     <p>Your nickname:</p>
 
@@ -792,6 +799,7 @@ document.addEventListener("keyup", e => {
 
 let playerColor = "red";
 let playerNickname = "Player";
+let playerTitle = "beginner lvl.1";
 let gameStarted = false;
 
 let inClan = false;
@@ -799,6 +807,116 @@ let clanOwner = false;
 
 let canHitPlayer = true;
 let pvpHitCooldown = 0;
+
+const titleImages = {};
+
+function loadTitle(name, paths){
+
+    titleImages[name] = [];
+
+    paths.forEach(path => {
+
+        const img = new Image();
+        img.src = path;
+
+        titleImages[name].push(img);
+
+    });
+
+}
+
+loadTitle(
+    "beginner lvl.1",
+    [
+        "funpng/beginner.png"
+    ]
+);
+loadTitle(
+    "beginner lvl.2",
+    [
+        "funpng/beginner.png",
+        "funpng/beginner.png"
+    ]
+);
+loadTitle(
+    "beginner lvl.3",
+    [
+        "funpng/beginner.png",
+        "funpng/beginner.png",
+        "funpng/beginner.png"
+    ]
+);
+loadTitle(
+    "player lvl.1",
+    [
+        "funpng/player.png"
+    ]
+);
+loadTitle(
+    "player lvl.2",
+    [
+        "funpng/player.png",
+        "funpng/player.png"
+    ]
+);
+loadTitle(
+    "player lvl.3",
+    [
+        "funpng/player.png",
+        "funpng/player.png",
+        "funpng/player.png"
+    ]
+);
+loadTitle(
+    "pro lvl.1",
+    [
+        "funpng/pro.png"
+    ]
+);
+loadTitle(
+    "pro lvl.2",
+    [
+        "funpng/pro.png",
+        "funpng/pro.png"
+    ]
+);
+loadTitle(
+    "pro lvl.3",
+    [
+        "funpng/pro.png",
+        "funpng/pro.png",
+        "funpng/pro.png"
+    ]
+);
+loadTitle(
+    "master lvl.1",
+    [
+        "funpng/master.png"
+    ]
+);
+loadTitle(
+    "master lvl.2",
+    [
+        "funpng/master.png",
+        "funpng/master.png"
+    ]
+);
+loadTitle(
+    "master lvl.3",
+    [
+        "funpng/master.png",
+        "funpng/master.png",
+        "funpng/master.png"
+    ]
+);
+loadTitle(
+    "GRAND MARTER",
+    [
+        "funpng/grandmaster.png"
+    ]
+);
+
+
 
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("orientationchange", resizeCanvas);
@@ -1235,6 +1353,7 @@ function startGame(){
     gameStarted = true;
 
     updateShopPrices();
+    updatePlayerTitle();
     requestAnimationFrame(loop);
 }
 
@@ -1318,6 +1437,7 @@ async function loginAccount() {
             document.getElementById("accountInfoBtn").style.display = "block";
             document.getElementById("deleteAccountBtn").style.display = "block";
             updateClanUI();
+            updatePlayerTitle();
         } else {
             alert("NO TOKEN");
         }
@@ -1947,6 +2067,103 @@ setInterval(()=>{
 
 },3000);
 
+function updatePlayerTitle(){
+    
+    if(points >= 1000000){
+
+        playerTitle = "GRAND MASTER";
+
+    } 
+    
+    else if(points >= 500000){
+
+        playerTitle = "master lvl.3";
+
+    } 
+    else if(points >= 300000){
+
+        playerTitle = "master lvl.2";
+
+    } 
+    else if(points >= 100000){
+
+        playerTitle = "master lvl.1";
+
+    }
+    
+    else if(points >= 50000){
+
+        playerTitle = "expert lvl.3";
+
+    } 
+    else if(points >= 30000){
+
+        playerTitle = "expert lvl.2";
+
+    } 
+    else if(points >= 10000){
+
+        playerTitle = "expert lvl.1";
+
+    }
+
+    else if(points >= 5000){
+
+        playerTitle = "pro lvl.3";
+
+    } 
+    else if(points >= 3000){
+
+        playerTitle = "pro lvl.2";
+
+    } 
+    else if(points >= 1000){
+
+        playerTitle = "pro lvl.1";
+
+    }
+
+    else if(points >= 500){
+
+        playerTitle = "player lvl.3";
+
+    } 
+    else if(points >= 300){
+
+        playerTitle = "player lvl.2";
+
+    } 
+    else if(points >= 200){
+
+        playerTitle = "player lvl.1";
+
+    }
+
+    else if(points >= 100){
+
+        playerTitle = "beginner lvl.3";
+
+    } 
+    else if(points >= 50){
+
+        playerTitle = "beginner lvl.2";
+
+    } 
+    else {
+
+        playerTitle = "beginner lvl.1";
+
+    }
+
+}
+
+function updateMenuTitle(){
+
+    document.getElementById("stats2").textContent =
+        playerTitle;
+
+}
+
 function toggleMusicLibrary(){
     const lib = document.getElementById("musicLibrary");
     lib.style.display = lib.style.display === "none" ? "block" : "none";
@@ -1975,6 +2192,7 @@ function addLevel(){
     }
 
     saveGame();
+    updatePlayerTitle();
 
     const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/1029200_Bitsplosion.mp3");
 
@@ -2043,6 +2261,8 @@ function buySpeed(){
         document.getElementById("coins").textContent = coins;
         updateShopPrices();
         addLevel();
+        points += 10;
+        updatePlayerTitle();
 
         saveGame();
     }
@@ -2058,6 +2278,8 @@ function buyPower(){
         document.getElementById("coins").textContent = coins;
         updateShopPrices();
         addLevel();
+        points += 10;
+        updatePlayerTitle();
 
         saveGame();
     }
@@ -2074,6 +2296,8 @@ function buyAttackSpeed(){
         document.getElementById("coins").textContent = coins;
         updateShopPrices();
         addLevel();
+        points += 10;
+        updatePlayerTitle();
 
         saveGame();
     }
@@ -2090,6 +2314,8 @@ function buyAttackRange(){
         document.getElementById("coins").textContent = coins;
         updateShopPrices();
         addLevel();
+        points += 10;
+        updatePlayerTitle();
 
         saveGame();
     }
@@ -2106,6 +2332,8 @@ function nerfEnemies(){
         document.getElementById("coins").textContent = coins;
         updateShopPrices();
         addLevel();
+        points += 10;
+        updatePlayerTitle();
 
         saveGame();
     }
@@ -2146,6 +2374,8 @@ function backToMenu(){
 
     // (опционально) остановить музыку
     stopMusic();
+
+    updateMenuTitle();
 
     // (опционально) сброс камеры
     camX = 0;
@@ -2241,6 +2471,7 @@ async function loadGame(){
         document.getElementById("level").textContent = level;
 
         updateShopPrices();
+        updatePlayerTitle();
 
     } catch(err){
         console.log("LOAD ERROR:", err);
@@ -2374,16 +2605,19 @@ function update(delta){
                 if(e.type === "jumper"){
                     coins += 1;
                     points += 5;
+                    updatePlayerTitle();
                     saveGame();
                 }
                 else if(e.type === "fast"){
                     coins += 5;
                     points += 25;
+                    updatePlayerTitle();
                     saveGame();
                 }
                 else{
                     coins += 2;
                     points += 10;
+                    updatePlayerTitle();
                     saveGame();
                 }
 
@@ -2451,7 +2685,7 @@ function update(delta){
                     }
 
                     e.knockX = player.dir * e.power * 1.1 * knockMultiplier;
-                    e.knockY = -e.power * 0.3 * knockMultiplier;
+                    e.knockY = -e.power * 0.5 * knockMultiplier;
 
                     player.attackTime = 0;
                 }
@@ -2489,7 +2723,8 @@ function update(delta){
             y: player.y,
             nickname: playerNickname,
             color: playerColor,
-            map: currentMap
+            map: currentMap,
+            title: playerTitle
         });
     }
 
@@ -2533,9 +2768,50 @@ function draw(){
     ctx.font = "bold 18px Arial";
     ctx.textAlign = "center";
 
+    const centerX = player.x + player.w / 2;
+
+
+    // картинка звания
+    const titleImgs = titleImages[playerTitle];
+
+    if(titleImgs){
+
+        const size = 40;
+        const gap = 2;
+
+        const totalWidth =
+            titleImgs.length * size +
+            (titleImgs.length - 1) * gap;
+
+        let startX = centerX - totalWidth / 2;
+
+        titleImgs.forEach(img => {
+
+            if(img.complete){
+
+                ctx.drawImage(
+                    img,
+                    startX,
+                    player.y - 70,
+                    size,
+                    size
+                );
+
+            }
+
+            startX += size + gap;
+
+        });
+
+    }
+    // ник
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 18px Arial";
+
     ctx.fillText(
         playerNickname,
-        player.x + player.w / 2,
+        centerX,
         player.y - 10
     );
 
@@ -2668,6 +2944,8 @@ window.addEventListener("load", () => {
     }
 
     loadGame();
+    updatePlayerTitle();
+    updateMenuTitle();
     restoreLogin();
 });
 </script>
