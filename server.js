@@ -1337,14 +1337,14 @@ io.on("connection",socket=>{
     
         // отправляем урон
         io.to(victimId).emit("damage", {
-        
             knockX:
                 attacker.x < victim.x
                 ? 25
                 : -25,
-        
-            knockY: -15
-        
+                
+            knockY: -15,
+                
+            attackerId: socket.id
         });
     
     });
@@ -1352,7 +1352,8 @@ io.on("connection",socket=>{
     socket.on("playerDeath", async (killerId)=>{
 
         console.log("PLAYER DEATH EVENT");
-        console.log("killer:", killerId);
+        console.log("victim socket:", socket.id);
+        console.log("killer socket:", killerId);
 
         const victim = players[socket.id];
         const killer = players[killerId];
