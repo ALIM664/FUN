@@ -1429,6 +1429,8 @@ async function loginAccount() {
             currentUser.id = data.id;
             currentUser.loggedIn = true;
 
+            loadGame();
+
             socket.emit("setPlayerData", {
                 userId: currentUser.id,
                 nickname: currentUser.nickname
@@ -1564,15 +1566,20 @@ function logoutAccount(){
     document.getElementById("deleteAccountBtn").style.display = "none";
 }
 
-function resetGameStats() {
+function resetGameStats(){
+
     coins = 0;
     points = 0;
     level = 1;
 
+    playerColor = "#ff0000";
+
     player.speed = 6;
     playerPower = 100;
+
     attackCooldown = 800;
     attackRange = 50;
+
     enemyPowerNerf = 1;
 
     speedPrice = 100;
@@ -1581,12 +1588,18 @@ function resetGameStats() {
     attackRangePrice = 250;
     nerfPrice = 300;
 
+    invincible = false;
+    invincibleTimer = 0;
+
+    freezeHit = false;
+
+    shield = false;
+    shieldTimer = 0;
+
+
     document.getElementById("coins").textContent = coins;
     document.getElementById("points").textContent = points;
     document.getElementById("level").textContent = level;
-
-    updateShopPrices();
-    updatePlayerTitle();
 }
 
 function showAccountInfo(){
@@ -2486,7 +2499,6 @@ async function loadGame(){
         const data = await res.json();
 
         if (!data.success) {
-            resetGameStats();
             return;
         }
 
