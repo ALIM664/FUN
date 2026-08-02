@@ -775,15 +775,13 @@ socket.on("damage", (data) => {
 
 });
 socket.on("pointsReward", data => {
+    console.log("Получена награда:", data);
 
     points += data.amount;
-
     document.getElementById("points").textContent = points;
 
     updatePlayerTitle();
-
     saveGame();
-
 });
 
 const canvas = document.getElementById("c");
@@ -922,7 +920,7 @@ loadTitle(
     ]
 );
 loadTitle(
-    "GRAND MARTER",
+    "GRAND MASTER",
     [
         "funpng/grandmaster.png"
     ]
