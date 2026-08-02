@@ -873,13 +873,35 @@ app.post("/load", auth, async(req,res)=>{
         if(result.rows.length === 0){
 
             return res.json({
+
                 coins:0,
+                points:0,
                 level:1,
+                        
                 playerColor:"#ff0000",
+                        
                 playerSpeed:6,
                 playerPower:100,
+                        
                 attackCooldown:800,
-                attackRange:50
+                attackRange:50,
+                        
+                enemyPowerNerf:1,
+                        
+                speedPrice:100,
+                powerPrice:200,
+                attackSpeedPrice:250,
+                attackRangePrice:250,
+                nerfPrice:300,
+                        
+                invincible:false,
+                invincibleTimer:0,
+                        
+                freezeHit:false,
+                        
+                shield:false,
+                shieldTimer:0
+                        
             });
 
         }
