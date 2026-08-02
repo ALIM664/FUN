@@ -1555,11 +1555,38 @@ function logoutAccount(){
     currentUser.id = null;
     currentUser.loggedIn = false;
 
+    resetGameStats();
+
     localStorage.removeItem("token");
     localStorage.removeItem("account");
 
     document.getElementById("accountInfoBtn").style.display = "none";
     document.getElementById("deleteAccountBtn").style.display = "none";
+}
+
+function resetGameStats() {
+    coins = 0;
+    points = 0;
+    level = 1;
+
+    player.speed = 6;
+    playerPower = 100;
+    attackCooldown = 800;
+    attackRange = 50;
+    enemyPowerNerf = 1;
+
+    speedPrice = 100;
+    powerPrice = 200;
+    attackSpeedPrice = 250;
+    attackRangePrice = 250;
+    nerfPrice = 300;
+
+    document.getElementById("coins").textContent = coins;
+    document.getElementById("points").textContent = points;
+    document.getElementById("level").textContent = level;
+
+    updateShopPrices();
+    updatePlayerTitle();
 }
 
 function showAccountInfo(){
@@ -2457,6 +2484,11 @@ async function loadGame(){
         });
 
         const data = await res.json();
+
+        if (!data.success) {
+            resetGameStats();
+            return;
+        }
 
         coins = data.coins;
         points = data.points;
