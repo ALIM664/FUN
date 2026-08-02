@@ -1428,6 +1428,8 @@ async function loginAccount() {
             currentUser.nickname = data.nickname;
             currentUser.id = data.id;
             currentUser.loggedIn = true;
+        
+            localStorage.setItem("token", data.token);
 
             loadGame();
 
@@ -1435,8 +1437,6 @@ async function loginAccount() {
                 userId: currentUser.id,
                 nickname: currentUser.nickname
             });
-        
-            localStorage.setItem("token", data.token);
 
             localStorage.setItem("account", JSON.stringify({
                 nickname: data.nickname,
