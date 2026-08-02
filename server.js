@@ -877,31 +877,31 @@ app.post("/load", auth, async(req,res)=>{
                 coins:0,
                 points:0,
                 level:1,
-                        
+
                 playerColor:"#ff0000",
-                        
+
                 playerSpeed:6,
                 playerPower:100,
-                        
+
                 attackCooldown:800,
                 attackRange:50,
-                        
+
                 enemyPowerNerf:1,
-                        
+
                 speedPrice:100,
                 powerPrice:200,
                 attackSpeedPrice:250,
                 attackRangePrice:250,
                 nerfPrice:300,
-                        
+
                 invincible:false,
                 invincibleTimer:0,
-                        
+
                 freezeHit:false,
-                        
+
                 shield:false,
                 shieldTimer:0
-                        
+
             });
 
         }
@@ -1350,6 +1350,9 @@ io.on("connection",socket=>{
     });
 
     socket.on("playerDeath", async (killerId)=>{
+
+        console.log("PLAYER DEATH EVENT");
+        console.log("killer:", killerId);
 
         const victim = players[socket.id];
         const killer = players[killerId];
