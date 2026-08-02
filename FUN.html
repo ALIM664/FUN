@@ -767,11 +767,12 @@ socket.on("players", (data) => {
     if (!data || typeof data !== "object") return;
     otherPlayers = data;
 });
-socket.on("damage", (data) => {
+socket.on("damage",(data)=>{
 
-    player.knockX = data.knockX * 3;
-    player.knockY = data.knockY * 2;
-    console.log("DAMAGE");
+    player.knockX = data.knockX;
+    player.knockY = data.knockY;
+
+    lastAttackerId = data.attackerId;
 
 });
 socket.on("pointsReward", data => {
@@ -817,6 +818,7 @@ let clanOwner = false;
 
 let canHitPlayer = true;
 let pvpHitCooldown = 0;
+let lastAttackerId = null;
 
 const titleImages = {};
 
@@ -2736,6 +2738,14 @@ function update(delta){
 
     // reset player fall
     if(player.y > window.innerHeight + 300){
+
+        if(lastAttackerId){
+        
+            socket.emit("playerDeath", lastAttackerId);
+        
+            lastAttackerId = null;
+        }
+    
         player.x = 3000;
         player.y = 100;
     }
