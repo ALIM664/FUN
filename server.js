@@ -1300,7 +1300,7 @@ io.on("connection",socket=>{
         if(players[socket.id]){
             players[socket.id].playerTitle = title;
         }
-    
+
     });
 
     socket.on("pvpHit", (victimId) => {
@@ -1373,8 +1373,8 @@ io.on("connection",socket=>{
         if(!killer.userId) return;
 
 
-        const reward1 = 5 * (victim.playerPoint || 1);
-        const reward2 = (victim.playerPoint || 1);
+        const reward1 = 5 * (victim.playerPoint);
+        const reward2 = (victim.playerPoint);
 
 
         players[killerId].points =
