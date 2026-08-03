@@ -1349,10 +1349,10 @@ io.on("connection",socket=>{
         io.to(victimId).emit("damage", {
             knockX:
                 attacker.x < victim.x
-                ? 25
-                : -25,
+                ? 50
+                : -50,
                 
-            knockY: -15,
+            knockY: -20,
                 
             attackerId: socket.id
         });
