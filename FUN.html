@@ -2951,6 +2951,16 @@ function loop(time){
 
 window.addEventListener("load", () => {
 
+    const colorPicker = document.getElementById("playerColorPicker");
+
+    colorPicker.addEventListener("input", () => {
+        playerColor = colorPicker.value;
+
+        if (currentUser.loggedIn) {
+            saveGame();
+        }
+    });
+
     const loader = document.getElementById("loadingScreen");
 
     requestAnimationFrame(() => {
