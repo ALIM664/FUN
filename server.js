@@ -1363,28 +1363,35 @@ io.on("connection",socket=>{
         if(!killer.userId) return;
 
 
-        const reward = 5 * (victim.playerPoint || 1);
+        const reward1 = 5 * (victim.playerPoint || 1);
+        const reward2 = (victim.playerPoint || 1);
 
 
         players[killerId].points =
-            (players[killerId].points || 0) + reward;
+            (players[killerId].points || 0) + reward1;
+        players[killerId].coins =
+            (players[killerId].coins || 0) + reward2;
 
 
         await pool.query(
             `
             UPDATE saves
-            SET points = points + $1
-            WHERE userId = $2
+            SET
+                points = points + $1,
+                coins = coins + $2
+            WHERE userId = $3
             `,
             [
-                reward,
+                reward1,
+                reward2,
                 killer.userId
             ]
         );
 
 
         io.to(killerId).emit("pointsReward",{
-            amount: reward
+            amount1: reward1,
+            amount2: reward2
         });
 
 
