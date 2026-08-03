@@ -1015,19 +1015,69 @@ app.get("/player/:query", (req, res) => {
         
         
             const row = result.rows[0];
-        
-        
+                    
+                    
             if(!row){
                 return res.json({
                     success:false,
                     message:"No row"
                 });
             }
-        
-        
+            
+            
+            let playerTitle = "beginner lvl.1";
+            
+            if(row.points >= 1000000){
+                playerTitle = "GRAND MASTER";
+            }
+            else if(row.points >= 500000){
+                playerTitle = "master lvl.3";
+            }
+            else if(row.points >= 300000){
+                playerTitle = "master lvl.2";
+            }
+            else if(row.points >= 100000){
+                playerTitle = "master lvl.1";
+            }
+            else if(row.points >= 50000){
+                playerTitle = "expert lvl.3";
+            }
+            else if(row.points >= 30000){
+                playerTitle = "expert lvl.2";
+            }
+            else if(row.points >= 10000){
+                playerTitle = "expert lvl.1";
+            }
+            else if(row.points >= 5000){
+                playerTitle = "pro lvl.3";
+            }
+            else if(row.points >= 3000){
+                playerTitle = "pro lvl.2";
+            }
+            else if(row.points >= 1000){
+                playerTitle = "pro lvl.1";
+            }
+            else if(row.points >= 500){
+                playerTitle = "player lvl.3";
+            }
+            else if(row.points >= 300){
+                playerTitle = "player lvl.2";
+            }
+            else if(row.points >= 200){
+                playerTitle = "player lvl.1";
+            }
+            else if(row.points >= 100){
+                playerTitle = "beginner lvl.3";
+            }
+            else if(row.points >= 50){
+                playerTitle = "beginner lvl.2";
+            }
+            
+            
             res.json({
                 success:true,
-                ...row
+                ...row,
+                playerTitle
             });
         
         }
