@@ -1232,6 +1232,8 @@ io.on("connection",socket=>{
         nickname:"Player",
         color:"#ff0000",
 
+        playerTitle:"beginner lvl.1",
+
         userId:null,
         clan:null,
 
@@ -1290,6 +1292,14 @@ io.on("connection",socket=>{
     
         players[socket.id].playerPoint =
             data.playerPoint || 1;
+    
+    });
+
+    socket.on("updateTitle",(title)=>{
+
+        if(players[socket.id]){
+            players[socket.id].playerTitle = title;
+        }
     
     });
 
