@@ -2186,6 +2186,8 @@ function updatePlayerTitle(){
 
     }
 
+    socket.emit("updateTitle", playerTitle);
+
 }
 
 function updateMenuTitle(){
@@ -2229,6 +2231,33 @@ function updateMenuTitle(){
                 box.appendChild(clone);
 
             };
+
+        }
+
+    });
+
+}
+
+function drawTitle(p){
+
+    const imgs = titleImages[p.playerTitle];
+
+    if(!imgs) return;
+
+
+    let size = 25;
+
+    imgs.forEach((img,i)=>{
+
+        if(img.complete){
+
+            ctx.drawImage(
+                img,
+                p.x + i * size,
+                p.y - 35,
+                size,
+                size
+            );
 
         }
 
@@ -2983,6 +3012,45 @@ function draw(){
         ctx.strokeStyle = "rgba(120, 120, 120, 0.9)"; 
         ctx.lineWidth = 3; 
         ctx.strokeRect(p.x, p.y, 40, 40);
+
+        // ===== ЗВАНИЕ ДРУГОГО ИГРОКА =====
+
+        const otherTitleImgs = titleImages[p.playerTitle];
+
+        if(otherTitleImgs){
+
+            const size = 40;
+            const gap = 2;
+
+            const totalWidth =
+                otherTitleImgs.length * size +
+                (otherTitleImgs.length - 1) * gap;
+
+
+            let startX =
+                p.x + 20 - totalWidth / 2;
+
+
+            otherTitleImgs.forEach(img=>{
+
+                if(img.complete){
+
+                    ctx.drawImage(
+                        img,
+                        startX,
+                        p.y - 70,
+                        size,
+                        size
+                    );
+
+                }
+
+                startX += size + gap;
+
+            });
+
+        }
+
     }
 
     ctx.restore();
