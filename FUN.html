@@ -778,8 +778,10 @@ socket.on("damage",(data)=>{
 socket.on("pointsReward", data => {
     console.log("Получена награда:", data);
 
-    points += data.amount;
+    points += data.amount1;
     document.getElementById("points").textContent = points;
+    coins += data.amount2;
+    document.getElementById("coins").textContent = coins;
 
     updatePlayerTitle();
     saveGame();
@@ -2494,6 +2496,7 @@ async function loadGame(){
         document.getElementById("coins").textContent = coins;
         document.getElementById("points").textContent = points;
         document.getElementById("level").textContent = level;
+        document.getElementById("playerColorPicker").value = playerColor;
 
         updateShopPrices();
         updatePlayerTitle();
