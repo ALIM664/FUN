@@ -1640,7 +1640,7 @@ async function searchPlayer(){
 
         result.innerHTML = `
             <h3>${data.nickname}</h3>
-            <p><b>Title:</b> ${playerTitle}</p>
+            <p><b>Title:</b> ${data.playerTitle}</p>
             <p><b>ID:</b> ${data.id}</p>
             <p><b>Level:</b> ${data.level}</p>
             <p><b>Points:</b> ${data.points}</p>
@@ -2848,7 +2848,7 @@ function update(delta){
             nickname: playerNickname,
             color: playerColor,
             map: currentMap,
-            title: playerTitle
+            playerTitle: playerTitle
         });
     }
 
