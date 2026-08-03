@@ -2828,6 +2828,8 @@ function update(delta){
     // reset player fall
     if(player.y > window.innerHeight + 300){
 
+        console.log("DEATH SEND", lastAttackerId);
+
         if(lastAttackerId){
         
             socket.emit("playerDeath", lastAttackerId);
