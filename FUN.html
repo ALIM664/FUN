@@ -531,6 +531,19 @@ canvas {
     font-size: 200%;
 }
 
+#menuTitleImage{
+    display:flex;
+    justify-content:center;
+    gap:5px;
+    height:50px;
+    margin:10px;
+}
+
+#menuTitleImage img{
+    width:50px;
+    height:50px;
+}
+
 </style>
 </head>
 
@@ -587,6 +600,7 @@ canvas {
 
     <input type="color" id="playerColorPicker" value="#ff0000">
         
+    <div id="menuTitleImage"></div>
     <span id="stats2"></span>
 
     <p>Your nickname:</p>
@@ -2178,6 +2192,47 @@ function updateMenuTitle(){
 
     document.getElementById("stats2").textContent =
         playerTitle;
+
+
+    const box = document.getElementById("menuTitleImage");
+
+    if(!box) return;
+
+    box.innerHTML = "";
+
+
+    const imgs = titleImages[playerTitle];
+
+    if(!imgs) return;
+
+
+    imgs.forEach(img => {
+
+        if(img.complete){
+
+            const clone = img.cloneNode();
+
+            clone.width = 50;
+            clone.height = 50;
+
+            box.appendChild(clone);
+
+        } else {
+
+            img.onload = () => {
+
+                const clone = img.cloneNode();
+
+                clone.width = 50;
+                clone.height = 50;
+
+                box.appendChild(clone);
+
+            };
+
+        }
+
+    });
 
 }
 
