@@ -1626,6 +1626,7 @@ async function searchPlayer(){
 
         result.innerHTML = `
             <h3>${data.nickname}</h3>
+            <p><b>Title:</b> ${playerTitle}</p>
             <p><b>ID:</b> ${data.id}</p>
             <p><b>Level:</b> ${data.level}</p>
             <p><b>Points:</b> ${data.points}</p>
@@ -2500,6 +2501,7 @@ async function loadGame(){
 
         updateShopPrices();
         updatePlayerTitle();
+        updateMenuTitle();
 
     } catch(err){
         console.log("LOAD ERROR:", err);
