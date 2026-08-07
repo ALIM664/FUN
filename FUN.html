@@ -3066,15 +3066,18 @@ window.addEventListener("load", async () => {
 // ================= LOOP =================
 let lastTime = performance.now();
 
-function loop(time){
+function loop(time) {
+    try {
+        let delta = (time - lastTime) / 16.67;
+        lastTime = time;
 
-    let delta = (time - lastTime) / 16.67;
-    lastTime = time;
-
-    delta = Math.min(delta, 2);
-
-    update(delta);
-    draw();
+        update(delta);
+        draw();
+    } catch (e) {
+        alert(e.stack);
+        console.error(e);
+        return;
+    }
 
     requestAnimationFrame(loop);
 }
