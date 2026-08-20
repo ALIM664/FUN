@@ -706,6 +706,16 @@ canvas {
     <button id="nerfBtn" onclick="nerfEnemies()">- Enemy Power (300)</button>
 
     <span id="stats"></span>
+
+    <br>
+
+    <button onclick="buyImmortal()">
+    Бессмертие 10 сек (500)
+    </button>
+
+    <button onclick="buyDoubleJump()">
+    Двойной прыжок (300)
+    </button>
 </div>
 <button id="musicBtn" onclick="toggleMusicLibrary()">🎵 Music Library</button>
 
@@ -783,6 +793,10 @@ socket.on("players", (data) => {
 });
 socket.on("damage",(data)=>{
 
+    if(immortal){
+        return;
+    }
+
     player.knockX = data.knockX;
     player.knockY = data.knockY;
 
@@ -808,6 +822,27 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const keys = {};
+
+window.addEventListener("keydown", (e) => {
+
+    if (!gameStarted) return;
+
+    if(e.code === "Space"){
+        if(player.grounded){
+        
+            player.vy = -player.jump;
+        
+        }
+        else if(doubleJumpCount > 0){
+        
+            player.vy = -player.jump;
+        
+            doubleJumpCount--;
+        
+        }
+    }
+
+});
 
 document.addEventListener("keydown", e => {
     if(e.repeat) return;
@@ -835,6 +870,31 @@ let clanOwner = false;
 let canHitPlayer = true;
 let pvpHitCooldown = 0;
 let lastAttackerId = null;
+
+const big1PlatformImg = new Image();
+big1PlatformImg.src = "funpng/plat0102.png";
+
+const small1PlatformImg = new Image();
+small1PlatformImg.src = "funpng/plat0101.png";
+
+
+const big2PlatformImg = new Image();
+big2PlatformImg.src = "funpng/plat0301.png";
+
+const small2PlatformImg = new Image();
+small2PlatformImg.src = "funpng/plat0301.png";
+
+
+const big3PlatformImg = new Image();
+big3PlatformImg.src = "funpng/plat0201.png";
+
+const small3PlatformImg = new Image();
+small3PlatformImg.src = "funpng/plat0202.png";
+
+
+const small01PlatformImg = new Image();
+small01PlatformImg.src = "funpng/plat0301.png";
+
 
 const titleImages = {};
 
@@ -1092,6 +1152,14 @@ let powerPrice = 200;
 let attackSpeedPrice = 250;
 let attackRangePrice = 250;
 let nerfPrice = 300;
+let immortalPrice = 50;
+let doubleJumpPrice = 30;
+
+let immortal = false;
+let immortalTimer = 0;
+
+let doubleJump = false; 
+let doubleJumpCount = 0;
 
 // ================= ENEMIES =================
 const enemies = [
@@ -1221,54 +1289,54 @@ const mapPlatforms = [
 
     // Карта 1
     [
-        {x:1500, y:600, w:3000, h:50},
-        {x:2500, y:500, w:1000, h:20},
-        {x:3500, y:400, w:1000, h:20},
-        {x:1500, y:400, w:1000, h:20}
+        {x:1500, y:600, w:3000, h:50, type:"big1"},
+        {x:2500, y:500, w:1000, h:20, type:"small1"},
+        {x:3500, y:400, w:1000, h:20, type:"small1"},
+        {x:1500, y:400, w:1000, h:20, type:"small1"}
     ],
 
     // Карта 2
     [
-        {x:1500, y:600, w:3000, h:50},
-        {x:2500, y:500, w:600, h:20},
-        {x:3500, y:500, w:600, h:20},
-        {x:1500, y:500, w:600, h:20},
+        {x:1500, y:600, w:3000, h:50, type:"big2"},
+        {x:2500, y:500, w:600, h:20, type:"small2"},
+        {x:3500, y:500, w:600, h:20, type:"small2"},
+        {x:1500, y:500, w:600, h:20, type:"small2"},
 
-        {x:2000, y:400, w:600, h:20},
-        {x:3000, y:400, w:600, h:20}
+        {x:2000, y:400, w:600, h:20, type:"small2"},
+        {x:3000, y:400, w:600, h:20, type:"small2"}
     ],
 
     // Карта 3
     [
-        {x:1500, y:600, w:3000, h:50},
-        {x:2500, y:400, w:500, h:20},
-        {x:3500, y:400, w:500, h:20},
-        {x:1500, y:400, w:500, h:20},
+        {x:1500, y:600, w:3000, h:50, type:"big3"},
+        {x:2500, y:400, w:500, h:20, type:"small3"},
+        {x:3500, y:400, w:500, h:20, type:"small3"},
+        {x:1500, y:400, w:500, h:20, type:"small3"},
 
-        {x:2000, y:500, w:500, h:20},
-        {x:3000, y:500, w:500, h:20},
-        {x:4000, y:500, w:500, h:20},
-        {x:2000, y:300, w:500, h:20},
-        {x:3000, y:300, w:500, h:20},
-        {x:4000, y:300, w:500, h:20}
+        {x:2000, y:500, w:500, h:20, type:"small3"},
+        {x:3000, y:500, w:500, h:20, type:"small3"},
+        {x:4000, y:500, w:500, h:20, type:"small3"},
+        {x:2000, y:300, w:500, h:20, type:"small3"},
+        {x:3000, y:300, w:500, h:20, type:"small3"},
+        {x:4000, y:300, w:500, h:20, type:"small3"}
     ],
 
     // Arena
     [
-        {x:2500, y:600, w:500, h:20},
-        {x:3500, y:600, w:500, h:20},
-        {x:1500, y:600, w:500, h:20},
+        {x:2500, y:600, w:500, h:20, type:"small01"},
+        {x:3500, y:600, w:500, h:20, type:"small01"},
+        {x:1500, y:600, w:500, h:20, type:"small01"},
 
-        {x:2500, y:400, w:500, h:20},
-        {x:3500, y:400, w:500, h:20},
-        {x:1500, y:400, w:500, h:20},
+        {x:2500, y:400, w:500, h:20, type:"small01"},
+        {x:3500, y:400, w:500, h:20, type:"small01"},
+        {x:1500, y:400, w:500, h:20, type:"small01"},
 
-        {x:2000, y:500, w:500, h:20},
-        {x:3000, y:500, w:500, h:20},
-        {x:4000, y:500, w:500, h:20},
-        {x:2000, y:300, w:500, h:20},
-        {x:3000, y:300, w:500, h:20},
-        {x:4000, y:300, w:500, h:20}
+        {x:2000, y:500, w:500, h:20, type:"small01"},
+        {x:3000, y:500, w:500, h:20, type:"small01"},
+        {x:4000, y:500, w:500, h:20, type:"small01"},
+        {x:2000, y:300, w:500, h:20, type:"small01"},
+        {x:3000, y:300, w:500, h:20, type:"small01"},
+        {x:4000, y:300, w:500, h:20, type:"small01"}
     ]
 ];
 
@@ -1280,6 +1348,9 @@ function attack(){
         player.attacking = true;
         player.attackTime = 5;
         player.lastAttack = now;
+        
+        const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/b162cc9c34050ce.mp3");
+        audio.play()
     }
 }
 
@@ -1288,13 +1359,16 @@ function enemyAttack(e){
 
     const cooldown =
         e.type === "fast"
-        ? 300
+        ? 500
         : 700;
 
     if(now - e.lastAttack > cooldown){
         e.attacking = true;
         e.attackTime = 10;
         e.lastAttack = now;
+        
+        const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/0f9470e818805fc.mp3");
+        audio.play()
     }
 }
 
@@ -2446,6 +2520,40 @@ function nerfEnemies(){
     }
 }
 
+
+function buyImmortal(){
+
+    if(coins >= immortalPrice){
+
+        coins -= immortalPrice;
+
+        immortal = true;
+        immortalTimer = 600; // 10 секунд при 60 FPS
+
+        document.getElementById("coins").textContent = coins;
+
+        saveGame();
+    }
+
+}
+
+
+function buyDoubleJump(){
+
+    if(coins >= doubleJumpPrice){
+
+        coins -= doubleJumpPrice;
+
+        doubleJump = true;
+
+        doubleJumpCount++;
+
+        document.getElementById("coins").textContent = coins;
+
+        saveGame();
+    }
+}
+
 function toggleMapMenu(){
     const m = document.getElementById("mapMenu");
     m.style.display = m.style.display === "none" ? "block" : "none";
@@ -2615,8 +2723,14 @@ function update(delta){
         player.dir = 1;
     }
 
-    if((keys["KeyW"] || keys["ArrowUp"] || keys["Space"]) && player.grounded){
-        player.vy = -player.jump;
+    if(keys["KeyW"] || keys["ArrowUp"] || keys["Space"]){
+    
+        if(player.grounded){
+        
+            player.vy = -player.jump;
+        
+        }
+    
     }
 
     if(keys["KeyH"] && !player.attacking){
@@ -2629,6 +2743,17 @@ function update(delta){
 
     if(player.attackTime > 0) player.attackTime -= delta;
     else player.attacking = false;
+
+    if(immortal){
+
+        immortalTimer -= delta;
+
+        if(immortalTimer <= 0){
+            immortal = false;
+            immortalTimer = 0;
+        }
+
+    }
 
     if (currentMap === 3 && player.attacking && pvpHitCooldown <= 0) {
 
@@ -2760,11 +2885,20 @@ function update(delta){
             }
 
             if(hit(e, player)){
+            
+                if(immortal){
+                    // бессмертие: бот не наносит урон и не отталкивает
+                    continue;
+                }
+            
                 enemyAttack(e);
-
+            
                 if(e.attacking){
+                
                     player.knockX = e.dir * e.power * enemyPowerNerf;
                     player.knockY = -e.power * 0.4 * enemyPowerNerf;
+                
+                    lastAttackerId = e.id;
                 }
             }
 
@@ -2801,10 +2935,13 @@ function update(delta){
                     e.knockX = player.dir * e.power * 1.1 * knockMultiplier;
                     e.knockY = -e.power * 0.5 * knockMultiplier;
 
+                    const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/0f9470e818805fc.mp3");
+                    audio.play()
+
                     player.attackTime = 0;
                 }
             }
-            if (Math.abs(e.x - player.x) <= 2) {
+            if (Math.abs(e.x - player.x) <= 3) {
             
                 e.stayNearTimer += delta / 60;
             
@@ -2853,7 +2990,7 @@ function update(delta){
     }
 
     document.getElementById("stats").textContent =
-        `speed:${player.speed}___power:${playerPower}___CD:${attackCooldown}ms___EN:${enemies.length}`;
+        `speed:${player.speed}___power:${playerPower}___CD:${attackCooldown}ms___EN:${enemies.length}___double jumps:${doubleJumpCount}`;
 }
 
 // ================= DRAW =================
@@ -2876,13 +3013,125 @@ function draw(){
     );
 
     // ===== платформы =====
-    ctx.fillStyle = maps[currentMap].platformColor;
-
+    const size = 50;
     for(const p of mapPlatforms[currentMap]){
-        ctx.fillRect(p.x, p.y, p.w, p.h);
+
+        if(p.type === "big1"){
+            ctx.drawImage(
+                big1PlatformImg,
+                p.x,
+                p.y,
+                p.w,
+                p.h
+            );
+        }
+        else if(p.type === "small1"){
+            ctx.drawImage(
+                small1PlatformImg,
+                p.x,
+                p.y,
+                p.w,
+                p.h
+            );
+        }
+        else if(p.type === "big3"){
+        
+            for(let x = p.x; x < p.x + p.w; x += size){
+            
+                ctx.drawImage(
+                    big3PlatformImg,
+                    x,
+                    p.y,
+                    size,
+                    size
+                );
+            
+            }
+        
+        }
+
+        else if(p.type === "small2"){
+            ctx.save();
+
+            ctx.filter = "brightness(0.2)";
+        
+            for(let x = p.x; x < p.x + p.w; x += size){
+            
+                ctx.drawImage(
+                    small2PlatformImg,
+                    x,
+                    p.y,
+                    size + 1,
+                    size / 5 * 2
+                );
+            
+            }
+        
+            ctx.restore();
+        }
+        else if(p.type === "big2"){
+            ctx.save();
+
+            ctx.filter = "brightness(0.2)";
+
+            for(let x = p.x; x < p.x + p.w; x += size){
+                ctx.drawImage(
+                    big2PlatformImg,
+                    x,
+                    p.y,
+                    size + 1,
+                    size
+                );
+            }
+        
+            ctx.restore();
+        }
+
+        else if(p.type === "small3"){
+        
+            for(let x = p.x; x < p.x + p.w; x += size){
+            
+                ctx.drawImage(
+                    small3PlatformImg,
+                    x,
+                    p.y,
+                    size,
+                    size / 5 * 2
+                );
+            
+            }
+        
+        }
+
+        else if(p.type === "small01"){
+            ctx.save();
+
+            ctx.filter = "brightness(1.5)";
+        
+            for(let x = p.x; x < p.x + p.w; x += size){
+            
+                ctx.drawImage(
+                    small01PlatformImg,
+                    x,
+                    p.y,
+                    size + 1,
+                    size / 5 * 2
+                );
+            
+            }
+        
+            ctx.restore();
+        }
+
     }
 
     // ===== игрок =====
+    if(immortal){
+        ctx.globalAlpha = 0.5; // в 2 раза прозрачнее
+    }
+    else{
+        ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = playerColor;
     ctx.fillRect(player.x, player.y, player.w, player.h);
     ctx.strokeStyle = "yellow"; 
@@ -2891,6 +3140,7 @@ function draw(){
     ctx.fillStyle = "white";
     ctx.font = "bold 18px Arial";
     ctx.textAlign = "center";
+    ctx.globalAlpha = 1;
 
     const centerX = player.x + player.w / 2;
 
