@@ -54,10 +54,11 @@ canvas {
 
 #shop button{
     height:40px;
+    width: 8%;
     background-color: red;
     border: yellow solid 3px;
     border-radius: 5px;
-    font-size: 20px;
+    font-size: 80%;
     color: orangered;
     -webkit-text-stroke: yellow 1px;
 }
@@ -710,11 +711,11 @@ canvas {
     <br>
 
     <button onclick="buyImmortal()">
-    Бессмертие 10 сек (500)
+    Бессмертие (50)
     </button>
 
     <button onclick="buyDoubleJump()">
-    Двойной прыжок (300)
+    Двойной прыжок (20)
     </button>
 </div>
 <button id="musicBtn" onclick="toggleMusicLibrary()">🎵 Music Library</button>
@@ -977,6 +978,27 @@ loadTitle(
     ]
 );
 loadTitle(
+    "expert lvl.1",
+    [
+        "funpng/expert.png"
+    ]
+);
+loadTitle(
+    "expert lvl.2",
+    [
+        "funpng/expert.png",
+        "funpng/expert.png"
+    ]
+);
+loadTitle(
+    "expert lvl.3",
+    [
+        "funpng/expert.png",
+        "funpng/expert.png",
+        "funpng/expert.png"
+    ]
+);
+loadTitle(
     "master lvl.1",
     [
         "funpng/master.png"
@@ -1153,7 +1175,7 @@ let attackSpeedPrice = 250;
 let attackRangePrice = 250;
 let nerfPrice = 300;
 let immortalPrice = 50;
-let doubleJumpPrice = 30;
+let doubleJumpPrice = 20;
 
 let immortal = false;
 let immortalTimer = 0;
