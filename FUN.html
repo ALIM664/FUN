@@ -2474,7 +2474,7 @@ function buySpeed(){
 function buyPower(){
     if(coins >= powerPrice){
         coins -= powerPrice;
-        playerPower += 10;
+        playerPower = Math.min(200, playerPower + 5);
 
         powerPrice = Math.floor(powerPrice + 10);
 
