@@ -2170,7 +2170,7 @@ async function updateClanUI(){
 
             document.getElementById("clanRequests").innerHTML = "";
 
-            btn.textContent = "🚪 Покинуть клан";
+            btn.textContent = "Покинуть клан";
             btn.onclick = leaveClan;
 
         }
@@ -2954,8 +2954,8 @@ function update(delta){
                         knockMultiplier = 4;
                     }
 
-                    e.knockX = player.dir * e.power * 1.1 * knockMultiplier;
-                    e.knockY = -e.power * 0.5 * knockMultiplier;
+                    e.knockX = player.dir * playerPower * 1.1 * knockMultiplier;
+                    e.knockY = -playerPower * 0.5 * knockMultiplier;
 
                     const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/0f9470e818805fc.mp3");
                     audio.play()
