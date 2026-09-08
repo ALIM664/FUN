@@ -2582,22 +2582,46 @@ function toggleMapMenu(){
 }
 
 function switchMap(i){
-    const dx = player.x;
-    const dy = player.y;
 
+    // переключаем карту
     currentMap = i;
 
-    // телепорт игрока
+    // телепорт игрока на стартовую позицию
     player.x = 3000;
     player.y = 100;
 
-    // телепорт всех врагов вместе с ним (с сохранением относительной позиции)
-    for(const e of enemies){
-        e.x = 3000 + (e.x - dx);
-        e.y = 100 + (e.y - dy);
+    player.vx = 0;
+    player.vy = 0;
 
-        e.startX = e.x;
-        e.startY = e.y;
+    player.knockX = 0;
+    player.knockY = 0;
+
+    // возвращаем всех ботов на их стартовые позиции
+    for(const e of enemies){
+
+        e.x = e.startX;
+        e.y = e.startY;
+
+        e.vx = 0;
+        e.vy = 0;
+
+        e.knockX = 0;
+        e.knockY = 0;
+
+        e.attacking = false;
+        e.attackTime = 0;
+
+        e.invulnerable = false;
+        e.invulnerableTimer = 0;
+
+        // если бот-прыгун
+        if(e.type === "jumper"){
+            e.grounded = false;
+            e.jumpTimer = 0;
+        }
+
+        // сбрасываем таймер нахождения рядом с игроком
+        e.stayNearTimer = 0;
     }
 }
 
