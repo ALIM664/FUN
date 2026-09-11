@@ -1350,13 +1350,16 @@ io.on("connection", async (socket) => {
                 created
             FROM chat_messages
             ORDER BY id ASC
+            LIMIT 50
         `);
+
+        console.log("CHAT HISTORY SENT:", result.rows.length);
 
         socket.emit("chatHistory", result.rows);
 
-    } catch(e) {
+    } catch (e) {
 
-        console.log("CHAT LOAD ERROR:", e);
+        console.error("CHAT HISTORY ERROR:", e);
 
     }
 
