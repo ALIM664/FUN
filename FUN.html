@@ -886,6 +886,72 @@ socket.on("pointsReward", data => {
     updatePlayerTitle();
     saveGame();
 });
+socket.on("chatHistory", (messages) => {
+
+    console.log("CHAT HISTORY:", messages);
+
+    const chatMessages = document.getElementById("chatMessages");
+
+    if (!chatMessages) {
+        console.log("chatMessages не найден");
+        return;
+    }
+
+    chatMessages.innerHTML = "";
+
+    messages.forEach(msg => {
+
+        const div = document.createElement("div");
+
+        div.className = "chat-message";
+
+        div.innerHTML = `
+            <b>${escapeHtml(msg.nickname)}</b>: 
+            ${escapeHtml(msg.message)}
+        `;
+
+        chatMessages.appendChild(div);
+
+    });
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+
+
+
+socket.on("chatMessage", (msg) => {
+
+    const chatMessages = document.getElementById("chatMessages");
+
+    if (!chatMessages) return;
+
+    const div = document.createElement("div");
+
+    div.className = "chat-message";
+
+    div.innerHTML = `
+        <b>${escapeHtml(msg.nickname)}</b>: 
+        ${escapeHtml(msg.message)}
+    `;
+
+    chatMessages.appendChild(div);
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+
+
+document.addEventListener("keydown", (e) => {
+
+    if (e.key !== "Enter") return;
+
+    const input = document.getElementById("chatInput");
+
+    if (document.activeElement === input) {
+        sendChatMessage();
+    }
+
+});
+
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -1847,45 +1913,14 @@ function sendChatMessage() {
     input.value = "";
 }
 
-socket.on("chatMessage", (data) => {
+function escapeHtml(text) {
 
-    const messages = document.getElementById("chatMessages");
+    const div = document.createElement("div");
 
-    if (!messages) return;
+    div.textContent = text;
 
-    const message = document.createElement("div");
-
-    message.className = "chatMessage";
-
-    const nickname = document.createElement("span");
-
-    nickname.className = "chatNickname";
-    nickname.textContent = data.nickname + ": ";
-
-    const text = document.createElement("span");
-
-    text.textContent = data.text;
-
-    message.appendChild(nickname);
-    message.appendChild(text);
-
-    messages.appendChild(message);
-
-    messages.scrollTop = messages.scrollHeight;
-
-});
-
-document.addEventListener("keydown", (e) => {
-
-    if (e.key !== "Enter") return;
-
-    const input = document.getElementById("chatInput");
-
-    if (document.activeElement === input) {
-        sendChatMessage();
-    }
-
-});
+    return div.innerHTML;
+}
 
 
 
