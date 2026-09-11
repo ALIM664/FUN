@@ -3136,8 +3136,11 @@ function updatePlayerTitle(){
 
 function updateMenuTitle(){
 
-    document.getElementById("stats2").textContent =
-        playerTitle;
+    const stats2 = document.getElementById("stats2");
+
+    if(stats2){
+        stats2.textContent = playerTitle;
+    }
 
     const box = document.getElementById("menuTitleImage");
 
@@ -3151,41 +3154,38 @@ function updateMenuTitle(){
 
     imgs.forEach(img => {
 
-        if(img.complete){
+        const addImage = () => {
 
-            const clone = img.cloneNode();
+            const clone = img.cloneNode(true);
 
             clone.width = 50;
             clone.height = 50;
 
             box.appendChild(clone);
+        };
 
-        } else {
-
-            img.onload = () => {
-
-                const clone = img.cloneNode();
-
-                clone.width = 50;
-                clone.height = 50;
-
-                box.appendChild(clone);
-
-            };
-
+        if(img.complete){
+            addImage();
+        }else{
+            img.addEventListener("load", addImage, {
+                once: true
+            });
         }
 
     });
 
 }
 
+
 function drawTitle(p){
+
+    if(!p || !p.playerTitle) return;
 
     const imgs = titleImages[p.playerTitle];
 
     if(!imgs) return;
 
-    let size = 25;
+    const size = 25;
 
     imgs.forEach((img,i)=>{
 
@@ -3205,11 +3205,15 @@ function drawTitle(p){
 
 }
 
+
 function playerDeath(killerId){
+
+    if(!killerId) return;
 
     socket.emit("playerDeath", killerId);
 
 }
+
 
 function toggleMusicLibrary(){
 
@@ -3224,39 +3228,59 @@ function toggleMusicLibrary(){
 
 }
 
+
 function playTrack(i){
+
+    if(!tracks || !tracks[i]) return;
 
     stopMusic();
 
     currentTrack = tracks[i];
 
-    if(currentTrack){
-        currentTrack.play().catch(err =>
-            console.log("MUSIC ERROR:", err)
-        );
-    }
+    currentTrack.play().catch(err => {
+        console.log("MUSIC ERROR:", err);
+    });
 
 }
 
+
 function stopMusic(){
 
-    tracks.forEach(t => t.pause());
+    if(!tracks) return;
+
+    tracks.forEach(t => {
+
+        try{
+            t.pause();
+            t.currentTime = 0;
+        }catch(e){}
+
+    });
 
     currentTrack = null;
 
 }
 
+
 function addLevel(){
 
     level++;
 
-    document.getElementById("level").textContent =
-        level;
+    const levelElement =
+        document.getElementById("level");
+
+    if(levelElement){
+        levelElement.textContent = level;
+    }
 
     points += 50;
 
-    document.getElementById("points").textContent =
-        points;
+    const pointsElement =
+        document.getElementById("points");
+
+    if(pointsElement){
+        pointsElement.textContent = points;
+    }
 
     if(level % 5 === 0){
         spawnRandomEnemy();
@@ -3271,35 +3295,29 @@ function addLevel(){
         "https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/1029200_Bitsplosion.mp3"
     );
 
-    audio.play().catch(err =>
-        console.log(err)
-    );
-
-    const startTime = 119.1;
-    const endTime = 119.8;
-
     audio.addEventListener("loadedmetadata", () => {
 
-        audio.currentTime = startTime;
+        audio.currentTime = 119.1;
 
-        audio.play().catch(err =>
-            console.log(err)
-        );
+        audio.play().catch(err => {
+            console.log("LEVEL SOUND ERROR:", err);
+        });
 
     });
 
     audio.addEventListener("timeupdate", () => {
 
-        if(audio.currentTime >= endTime){
+        if(audio.currentTime >= 119.8){
 
             audio.pause();
-            audio.currentTime = startTime;
+            audio.currentTime = 0;
 
         }
 
     });
 
 }
+
 
 function spawnRandomEnemy(){
 
@@ -3320,7 +3338,6 @@ function spawnRandomEnemy(){
         );
 
     }
-
     else if(type === 1){
 
         e = makeJumpEnemy(
@@ -3330,7 +3347,6 @@ function spawnRandomEnemy(){
         );
 
     }
-
     else{
 
         e = makeFastEnemy(x);
@@ -3341,219 +3357,257 @@ function spawnRandomEnemy(){
 
 }
 
+
 function updateShopPrices(){
 
-    document.getElementById("speedBtn").textContent =
-        `+ Speed (${speedPrice})`;
+    const speedBtn =
+        document.getElementById("speedBtn");
 
-    document.getElementById("powerBtn").textContent =
-        `+ Power (${powerPrice})`;
+    const powerBtn =
+        document.getElementById("powerBtn");
 
-    document.getElementById("attackSpeedBtn").textContent =
-        `+ Attack Speed (${attackSpeedPrice})`;
+    const attackSpeedBtn =
+        document.getElementById("attackSpeedBtn");
 
-    document.getElementById("attackRangeBtn").textContent =
-        `+ Range (${attackRangePrice})`;
+    const attackRangeBtn =
+        document.getElementById("attackRangeBtn");
 
-    document.getElementById("nerfBtn").textContent =
-        `- Enemy Power (${nerfPrice})`;
+    const nerfBtn =
+        document.getElementById("nerfBtn");
+
+
+    if(speedBtn){
+        speedBtn.textContent =
+            `+ Speed (${speedPrice})`;
+    }
+
+    if(powerBtn){
+        powerBtn.textContent =
+            `+ Power (${powerPrice})`;
+    }
+
+    if(attackSpeedBtn){
+        attackSpeedBtn.textContent =
+            `+ Attack Speed (${attackSpeedPrice})`;
+    }
+
+    if(attackRangeBtn){
+        attackRangeBtn.textContent =
+            `+ Range (${attackRangePrice})`;
+    }
+
+    if(nerfBtn){
+        nerfBtn.textContent =
+            `- Enemy Power (${nerfPrice})`;
+    }
 
 }
+
 
 function buySpeed(){
 
-    if(coins >= speedPrice){
+    if(coins < speedPrice) return;
 
-        coins -= speedPrice;
+    coins -= speedPrice;
 
-        player.speed += 1;
+    player.speed += 1;
 
-        speedPrice =
-            Math.floor(speedPrice + 10);
+    speedPrice =
+        Math.floor(speedPrice + 10);
 
-        document.getElementById("coins").textContent =
-            coins;
+    const coinsElement =
+        document.getElementById("coins");
 
-        updateShopPrices();
-
-        addLevel();
-
-        points += 10;
-
-        updatePlayerTitle();
-
-        saveGame();
-
+    if(coinsElement){
+        coinsElement.textContent = coins;
     }
 
+    updateShopPrices();
+
+    addLevel();
+
+    points += 10;
+
+    updatePlayerTitle();
+
+    saveGame();
+
 }
+
 
 function buyPower(){
 
-    if(coins >= powerPrice){
+    if(coins < powerPrice) return;
 
-        coins -= powerPrice;
+    coins -= powerPrice;
 
-        playerPower =
-            Math.min(
-                200,
-                playerPower + 5
-            );
+    playerPower =
+        Math.min(200, playerPower + 5);
 
-        powerPrice =
-            Math.floor(powerPrice + 10);
+    powerPrice =
+        Math.floor(powerPrice + 10);
 
-        document.getElementById("coins").textContent =
-            coins;
+    const coinsElement =
+        document.getElementById("coins");
 
-        updateShopPrices();
-
-        addLevel();
-
-        points += 10;
-
-        updatePlayerTitle();
-
-        saveGame();
-
+    if(coinsElement){
+        coinsElement.textContent = coins;
     }
 
+    updateShopPrices();
+
+    addLevel();
+
+    points += 10;
+
+    updatePlayerTitle();
+
+    saveGame();
+
 }
+
 
 function buyAttackSpeed(){
 
-    if(coins >= attackSpeedPrice){
+    if(coins < attackSpeedPrice) return;
 
-        coins -= attackSpeedPrice;
+    coins -= attackSpeedPrice;
 
-        attackCooldown =
-            Math.max(
-                100,
-                attackCooldown - 50
-            );
+    attackCooldown =
+        Math.max(100, attackCooldown - 50);
 
-        attackSpeedPrice =
-            Math.floor(
-                attackSpeedPrice + 10
-            );
+    attackSpeedPrice =
+        Math.floor(attackSpeedPrice + 10);
 
-        document.getElementById("coins").textContent =
-            coins;
+    const coinsElement =
+        document.getElementById("coins");
 
-        updateShopPrices();
-
-        addLevel();
-
-        points += 10;
-
-        updatePlayerTitle();
-
-        saveGame();
-
+    if(coinsElement){
+        coinsElement.textContent = coins;
     }
 
+    updateShopPrices();
+
+    addLevel();
+
+    points += 10;
+
+    updatePlayerTitle();
+
+    saveGame();
+
 }
+
 
 function buyAttackRange(){
 
-    if(coins >= attackRangePrice){
+    if(coins < attackRangePrice) return;
 
-        coins -= attackRangePrice;
+    coins -= attackRangePrice;
 
-        attackRange += 5;
+    attackRange += 5;
 
-        attackRangePrice =
-            Math.floor(
-                attackRangePrice + 10
-            );
+    attackRangePrice =
+        Math.floor(attackRangePrice + 10);
 
-        document.getElementById("coins").textContent =
-            coins;
+    const coinsElement =
+        document.getElementById("coins");
 
-        updateShopPrices();
-
-        addLevel();
-
-        points += 10;
-
-        updatePlayerTitle();
-
-        saveGame();
-
+    if(coinsElement){
+        coinsElement.textContent = coins;
     }
 
+    updateShopPrices();
+
+    addLevel();
+
+    points += 10;
+
+    updatePlayerTitle();
+
+    saveGame();
+
 }
+
 
 function nerfEnemies(){
 
-    if(coins >= nerfPrice){
+    if(coins < nerfPrice) return;
 
-        coins -= nerfPrice;
+    coins -= nerfPrice;
 
-        enemyPowerNerf =
-            Math.max(
-                0.3,
-                enemyPowerNerf - 0.2
-            );
+    enemyPowerNerf =
+        Math.max(
+            0.3,
+            enemyPowerNerf - 0.2
+        );
 
-        nerfPrice =
-            Math.floor(nerfPrice + 10);
+    nerfPrice =
+        Math.floor(nerfPrice + 10);
 
-        document.getElementById("coins").textContent =
-            coins;
+    const coinsElement =
+        document.getElementById("coins");
 
-        updateShopPrices();
-
-        addLevel();
-
-        points += 10;
-
-        updatePlayerTitle();
-
-        saveGame();
-
+    if(coinsElement){
+        coinsElement.textContent = coins;
     }
 
+    updateShopPrices();
+
+    addLevel();
+
+    points += 10;
+
+    updatePlayerTitle();
+
+    saveGame();
+
 }
+
 
 function buyImmortal(){
 
-    if(coins >= immortalPrice){
+    if(coins < immortalPrice) return;
 
-        coins -= immortalPrice;
+    coins -= immortalPrice;
 
-        immortal = true;
+    immortal = true;
 
-        // 600 кадров примерно 10 секунд при 60 FPS
-        immortalTimer = 600;
+    immortalTimer = 600;
 
-        document.getElementById("coins").textContent =
-            coins;
+    const coinsElement =
+        document.getElementById("coins");
 
-        saveGame();
-
+    if(coinsElement){
+        coinsElement.textContent = coins;
     }
 
+    saveGame();
+
 }
+
 
 function buyDoubleJump(){
 
-    if(coins >= doubleJumpPrice){
+    if(coins < doubleJumpPrice) return;
 
-        coins -= doubleJumpPrice;
+    coins -= doubleJumpPrice;
 
-        doubleJump = true;
+    doubleJump = true;
 
-        doubleJumpCount++;
+    doubleJumpCount++;
 
-        document.getElementById("coins").textContent =
-            coins;
+    const coinsElement =
+        document.getElementById("coins");
 
-        saveGame();
-
+    if(coinsElement){
+        coinsElement.textContent = coins;
     }
 
+    saveGame();
+
 }
+
 
 function toggleMapMenu(){
 
@@ -3569,6 +3623,7 @@ function toggleMapMenu(){
 
 }
 
+
 function switchMap(i){
 
     currentMap = i;
@@ -3581,6 +3636,7 @@ function switchMap(i){
 
     player.knockX = 0;
     player.knockY = 0;
+
 
     for(const e of enemies){
 
@@ -3612,18 +3668,19 @@ function switchMap(i){
 
 }
 
+
 function getEnemyCount(){
 
-    return Math.floor(
-        (level - 1) / 5
-    ) + 1;
+    return Math.floor((level - 1) / 5) + 1;
 
 }
+
 
 function updateEnemyCount(){
 
     const targetCount =
         getEnemyCount();
+
 
     while(enemies.length < targetCount){
 
@@ -3644,7 +3701,6 @@ function updateEnemyCount(){
             );
 
         }
-
         else if(type === 1){
 
             e = makeJumpEnemy(
@@ -3654,7 +3710,6 @@ function updateEnemyCount(){
             );
 
         }
-
         else{
 
             e = makeFastEnemy(
@@ -3669,6 +3724,7 @@ function updateEnemyCount(){
 
     }
 
+
     while(enemies.length > targetCount){
 
         enemies.pop();
@@ -3677,12 +3733,17 @@ function updateEnemyCount(){
 
 }
 
+
 function backToMenu(){
 
     gameStarted = false;
 
-    document.getElementById("startMenu").style.display =
-        "flex";
+    const menu =
+        document.getElementById("startMenu");
+
+    if(menu){
+        menu.style.display = "flex";
+    }
 
     stopMusic();
 
@@ -3693,24 +3754,20 @@ function backToMenu(){
     keys["KeyA"] = false;
     keys["KeyD"] = false;
     keys["Space"] = false;
-    keys["KeyW"] = false;
-    keys["ArrowLeft"] = false;
-    keys["ArrowRight"] = false;
-    keys["ArrowUp"] = false;
-    keys["KeyH"] = false;
 
 }
 
+
 async function saveGame(){
+
+    const token =
+        localStorage.getItem("token");
+
+    if(!token) return;
 
     try{
 
-        const token =
-            localStorage.getItem("token");
-
-        if(!token) return;
-
-        await fetch("/save",{
+        await fetch("/save", {
 
             method:"POST",
 
@@ -3727,7 +3784,7 @@ async function saveGame(){
 
                 playerColor,
 
-                playerSpeed:player.speed,
+                playerSpeed: player.speed,
                 playerPower,
 
                 attackCooldown,
@@ -3741,10 +3798,11 @@ async function saveGame(){
                 attackRangePrice,
                 nerfPrice,
 
-                invincible:immortal,
-                invincibleTimer:immortalTimer,
+                invincible,
+                invincibleTimer,
 
                 freezeHit,
+
                 shield,
                 shieldTimer
 
@@ -3752,7 +3810,8 @@ async function saveGame(){
 
         });
 
-    }catch(err){
+    }
+    catch(err){
 
         console.log(
             "SAVE ERROR:",
@@ -3763,17 +3822,18 @@ async function saveGame(){
 
 }
 
+
 async function loadGame(){
 
     const token =
         localStorage.getItem("token");
 
-    if(!token) return;
+    if(!token) return false;
 
     try{
 
         const res =
-            await fetch("/load",{
+            await fetch("/load", {
 
                 method:"POST",
 
@@ -3784,302 +3844,190 @@ async function loadGame(){
 
             });
 
-        const data =
-            await res.json();
 
-        if(data.error){
+        if(!res.ok){
 
-            console.log(data.error);
+            console.log(
+                "LOAD HTTP ERROR:",
+                res.status
+            );
 
-            return;
+            return false;
 
         }
 
-        coins = data.coins;
-        points = data.points;
-        level = data.level;
+
+        const data =
+            await res.json();
+
+
+        if(data.error){
+
+            console.log(
+                "LOAD SERVER ERROR:",
+                data.error
+            );
+
+            return false;
+
+        }
+
+
+        coins =
+            Number(data.coins ?? 0);
+
+        points =
+            Number(data.points ?? 0);
+
+        level =
+            Number(data.level ?? 1);
 
         playerColor =
-            data.playerColor;
+            data.playerColor || "#ff0000";
 
-        player.speed =
-            data.playerSpeed;
+
+        if(player){
+
+            player.speed =
+                Number(data.playerSpeed ?? 6);
+
+        }
+
 
         playerPower =
-            data.playerPower;
+            Number(data.playerPower ?? 100);
 
         attackCooldown =
-            data.attackCooldown;
+            Number(data.attackCooldown ?? 800);
 
         attackRange =
-            data.attackRange;
+            Number(data.attackRange ?? 50);
 
         enemyPowerNerf =
-            data.enemyPowerNerf;
+            Number(data.enemyPowerNerf ?? 1);
+
 
         speedPrice =
-            data.speedPrice;
+            Number(data.speedPrice ?? 100);
 
         powerPrice =
-            data.powerPrice;
+            Number(data.powerPrice ?? 200);
 
         attackSpeedPrice =
-            data.attackSpeedPrice;
+            Number(data.attackSpeedPrice ?? 250);
 
         attackRangePrice =
-            data.attackRangePrice;
+            Number(data.attackRangePrice ?? 250);
 
         nerfPrice =
-            data.nerfPrice;
+            Number(data.nerfPrice ?? 300);
 
-        invincible =
-            !!data.invincible;
 
         immortal =
-            !!data.invincible;
+            Boolean(data.invincible);
 
         immortalTimer =
-            data.invincibleTimer || 0;
+            Number(data.invincibleTimer ?? 0);
 
         freezeHit =
-            !!data.freezeHit;
+            Boolean(data.freezeHit);
 
         shield =
-            !!data.shield;
+            Boolean(data.shield);
 
         shieldTimer =
-            data.shieldTimer || 0;
+            Number(data.shieldTimer ?? 0);
 
-        document.getElementById("coins").textContent =
-            coins;
 
-        document.getElementById("points").textContent =
-            points;
+        const coinsElement =
+            document.getElementById("coins");
 
-        document.getElementById("level").textContent =
-            level;
+        const pointsElement =
+            document.getElementById("points");
 
-        document.getElementById("playerColorPicker").value =
-            playerColor;
+        const levelElement =
+            document.getElementById("level");
+
+        const colorPicker =
+            document.getElementById("playerColorPicker");
+
+
+        if(coinsElement){
+            coinsElement.textContent = coins;
+        }
+
+        if(pointsElement){
+            pointsElement.textContent = points;
+        }
+
+        if(levelElement){
+            levelElement.textContent = level;
+        }
+
+        if(colorPicker){
+            colorPicker.value = playerColor;
+        }
+
 
         updateShopPrices();
-
         updatePlayerTitle();
-
         updateMenuTitle();
+        updateEnemyCount();
 
-    }catch(err){
+        return true;
+
+    }
+    catch(err){
 
         console.log(
             "LOAD ERROR:",
             err
         );
 
-    }
-
-}
-
-
-// ======================================================
-// ========================= CHAT ========================
-// ======================================================
-
-function initChat(){
-
-    const input =
-        document.getElementById("chatInput");
-
-    const sendBtn =
-        document.getElementById("chatSendBtn");
-
-    const chatBox =
-        document.getElementById("chatMessages");
-
-    if(!input || !sendBtn || !chatBox){
-
-        console.log(
-            "CHAT ELEMENTS NOT FOUND"
-        );
-
-        return;
-
-    }
-
-    sendBtn.addEventListener(
-        "click",
-        sendChatMessage
-    );
-
-    input.addEventListener(
-        "keydown",
-        (event)=>{
-
-            if(event.key === "Enter"){
-
-                event.preventDefault();
-
-                sendChatMessage();
-
-            }
-
-        }
-    );
-
-}
-
-function sendChatMessage(){
-
-    const input =
-        document.getElementById("chatInput");
-
-    if(!input) return;
-
-    const message =
-        input.value.trim();
-
-    if(!message) return;
-
-    if(message.length > 200){
-
-        alert(
-            "Сообщение слишком длинное. Максимум 200 символов."
-        );
-
-        return;
-
-    }
-
-    if(!socket){
-
-        console.log(
-            "Socket.IO не подключен"
-        );
-
-        return;
-
-    }
-
-    if(!currentUser.loggedIn){
-
-        alert(
-            "Войдите в аккаунт, чтобы писать в чат."
-        );
-
-        return;
-
-    }
-
-    socket.emit(
-        "chatMessage",
-        {
-            message:message
-        }
-    );
-
-    input.value = "";
-
-}
-
-function addChatMessage(data){
-
-    const chatBox =
-        document.getElementById("chatMessages");
-
-    if(!chatBox) return;
-
-    const message =
-        document.createElement("div");
-
-    message.className =
-        "chatMessage";
-
-    const nickname =
-        document.createElement("b");
-
-    nickname.textContent =
-        data.nickname || "Player";
-
-    const text =
-        document.createElement("span");
-
-    text.textContent =
-        ": " + (data.message || "");
-
-    message.appendChild(nickname);
-    message.appendChild(text);
-
-    chatBox.appendChild(message);
-
-    while(chatBox.children.length > 50){
-
-        chatBox.removeChild(
-            chatBox.firstChild
-        );
-
-    }
-
-    chatBox.scrollTop =
-        chatBox.scrollHeight;
-
-}
-
-function clearChat(){
-
-    const chatBox =
-        document.getElementById("chatMessages");
-
-    if(chatBox){
-
-        chatBox.innerHTML = "";
+        return false;
 
     }
 
 }
 
 
-// ======================================================
-// ======================== UPDATE =======================
-// ======================================================
+// ================= UPDATE =================
 
 function update(delta){
 
     if(!gameStarted) return;
 
     if(pvpHitCooldown > 0){
-
         pvpHitCooldown -= delta;
-
     }
 
-    if(!gameStarted) return;
 
     // ================= PLAYER =================
 
     player.vx = 0;
+
 
     if(
         keys["KeyA"] ||
         keys["ArrowLeft"]
     ){
 
-        player.vx =
-            -player.speed;
-
+        player.vx = -player.speed;
         player.dir = -1;
 
     }
+
 
     if(
         keys["KeyD"] ||
         keys["ArrowRight"]
     ){
 
-        player.vx =
-            player.speed;
-
+        player.vx = player.speed;
         player.dir = 1;
 
     }
+
 
     if(
         keys["KeyW"] ||
@@ -4089,12 +4037,12 @@ function update(delta){
 
         if(player.grounded){
 
-            player.vy =
-                -player.jump;
+            player.vy = -player.jump;
 
         }
 
     }
+
 
     if(
         keys["KeyH"] &&
@@ -4105,20 +4053,23 @@ function update(delta){
 
     }
 
-    player.vy +=
-        gravity * delta;
+
+    player.vy += gravity * delta;
 
     move(player, delta);
+
 
     if(player.attackTime > 0){
 
         player.attackTime -= delta;
 
-    }else{
+    }
+    else{
 
         player.attacking = false;
 
     }
+
 
     // ================= IMMORTAL =================
 
@@ -4129,12 +4080,12 @@ function update(delta){
         if(immortalTimer <= 0){
 
             immortal = false;
-
             immortalTimer = 0;
 
         }
 
     }
+
 
     // ================= PVP =================
 
@@ -4154,21 +4105,20 @@ function update(delta){
             y:player.y,
 
             w:attackRange,
-
             h:player.h
 
         };
 
+
         for(const id in otherPlayers){
 
-            if(id === socket.id)
-                continue;
+            if(id === socket.id) continue;
 
             const p =
                 otherPlayers[id];
 
-            if(p.map !== 3)
-                continue;
+            if(p.map !== 3) continue;
+
 
             const target = {
 
@@ -4179,6 +4129,7 @@ function update(delta){
                 h:40
 
             };
+
 
             if(hit(hitbox,target)){
 
@@ -4200,23 +4151,18 @@ function update(delta){
 
     }
 
+
     // ================= ENEMIES =================
 
     if(currentMap < 3){
-
-        const mainPlatform =
-            mapPlatforms[currentMap][0];
 
         for(const e of enemies){
 
             if(e.invulnerable){
 
-                e.invulnerableTimer -=
-                    delta;
+                e.invulnerableTimer -= delta;
 
-                if(
-                    e.invulnerableTimer <= 0
-                ){
+                if(e.invulnerableTimer <= 0){
 
                     e.invulnerable = false;
 
@@ -4224,41 +4170,42 @@ function update(delta){
 
             }
 
+
             const onMainPlatform =
                 player.x >= 1500 &&
                 player.x <= 4460 &&
                 player.y + player.h <= 650;
 
+
             if(onMainPlatform){
 
                 if(player.x < e.x){
 
-                    e.vx =
-                        -e.speed;
-
+                    e.vx = -e.speed;
                     e.dir = -1;
 
-                }else{
+                }
+                else{
 
-                    e.vx =
-                        e.speed;
-
+                    e.vx = e.speed;
                     e.dir = 1;
 
                 }
 
-            }else{
+            }
+            else{
 
                 e.vx = 0;
 
             }
 
-            e.vy +=
-                gravity * delta;
+
+            e.vy += gravity * delta;
 
             move(e, delta);
 
-            // ================= FALL =================
+
+            // ===== FALL =====
 
             if(
                 e.y >
@@ -4271,14 +4218,12 @@ function update(delta){
                     points += 5;
 
                 }
-
                 else if(e.type === "fast"){
 
                     coins += 5;
                     points += 25;
 
                 }
-
                 else{
 
                     coins += 2;
@@ -4286,23 +4231,26 @@ function update(delta){
 
                 }
 
+
                 updatePlayerTitle();
 
-                document.getElementById(
-                    "coins"
-                ).textContent = coins;
+                const coinsElement =
+                    document.getElementById("coins");
 
-                document.getElementById(
-                    "points"
-                ).textContent = points;
+                const pointsElement =
+                    document.getElementById("points");
 
-                saveGame();
+                if(coinsElement){
+                    coinsElement.textContent = coins;
+                }
 
-                e.x =
-                    e.startX;
+                if(pointsElement){
+                    pointsElement.textContent = points;
+                }
 
-                e.y =
-                    e.startY;
+
+                e.x = e.startX;
+                e.y = e.startY;
 
                 e.vx = 0;
                 e.vy = 0;
@@ -4311,30 +4259,31 @@ function update(delta){
                 e.knockY = 0;
 
                 e.invulnerable = true;
+                e.invulnerableTimer = 180;
 
-                e.invulnerableTimer =
-                    180;
+                saveGame();
 
             }
 
-            // ================= ENEMY ATTACK =================
+
+            // ===== ENEMY ATTACK =====
 
             if(e.attackTime > 0){
 
                 e.attackTime -= delta;
 
-            }else{
+            }
+            else{
 
                 e.attacking = false;
 
             }
 
-            if(hit(e, player)){
+
+            if(hit(e,player)){
 
                 if(immortal){
-
                     continue;
-
                 }
 
                 enemyAttack(e);
@@ -4351,14 +4300,14 @@ function update(delta){
                         0.4 *
                         enemyPowerNerf;
 
-                    lastAttackerId =
-                        e.id;
+                    lastAttackerId = e.id;
 
                 }
 
             }
 
-            // ================= JUMPER =================
+
+            // ===== JUMPER =====
 
             if(e.type === "jumper"){
 
@@ -4372,21 +4321,23 @@ function update(delta){
                         70 +
                         Math.random() * 10;
 
-                }else{
+                }
+                else{
 
-                    e.jumpTimer -=
-                        delta;
+                    e.jumpTimer -= delta;
 
                 }
 
             }
 
-            // ================= PLAYER ATTACK =================
+
+            // ===== PLAYER ATTACK =====
 
             if(player.attackTime > 0){
 
                 const range =
                     attackRange;
+
 
                 const hitbox = {
 
@@ -4398,10 +4349,10 @@ function update(delta){
                     y:player.y,
 
                     w:range,
-
                     h:player.h
 
                 };
+
 
                 if(
                     hit(hitbox,e) &&
@@ -4410,11 +4361,11 @@ function update(delta){
 
                     let knockMultiplier = 1;
 
+
                     if(e.type === "fast"){
-
                         knockMultiplier = 4;
-
                     }
+
 
                     e.knockX =
                         player.dir *
@@ -4427,15 +4378,13 @@ function update(delta){
                         0.5 *
                         knockMultiplier;
 
+
                     const audio =
                         new Audio(
                             "https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/0f9470e818805fc.mp3"
                         );
 
-                    audio.play().catch(
-                        err =>
-                            console.log(err)
-                    );
+                    audio.play().catch(()=>{});
 
                     player.attackTime = 0;
 
@@ -4443,7 +4392,8 @@ function update(delta){
 
             }
 
-            // ================= ENEMY NEAR PLAYER =================
+
+            // ===== ENEMY STUCK =====
 
             if(
                 Math.abs(e.x - player.x) <= 3
@@ -4451,6 +4401,7 @@ function update(delta){
 
                 e.stayNearTimer +=
                     delta / 60;
+
 
                 if(
                     e.stayNearTimer >=
@@ -4467,7 +4418,8 @@ function update(delta){
 
                 }
 
-            }else{
+            }
+            else{
 
                 e.stayNearTimer = 0;
 
@@ -4476,6 +4428,7 @@ function update(delta){
         }
 
     }
+
 
     // ================= CAMERA =================
 
@@ -4486,17 +4439,13 @@ function update(delta){
             camX
         ) * 0.1;
 
+
     // ================= PLAYER FALL =================
 
     if(
         player.y >
         window.innerHeight + 300
     ){
-
-        console.log(
-            "DEATH SEND",
-            lastAttackerId
-        );
 
         if(lastAttackerId){
 
@@ -4509,54 +4458,66 @@ function update(delta){
 
         }
 
+
         player.x = 3000;
         player.y = 100;
 
     }
 
-    // ================= SEND POSITION =================
+
+    // ================= SEND PLAYER =================
 
     if(gameStarted){
 
-        socket.emit(
-            "move",
-            {
+        socket.emit("move",{
 
-                x:player.x,
-                y:player.y,
+            x:player.x,
+            y:player.y,
 
-                nickname:playerNickname,
+            nickname:playerNickname,
 
-                color:playerColor,
+            color:playerColor,
 
-                map:currentMap,
+            map:currentMap,
 
-                playerTitle:playerTitle,
+            playerTitle:playerTitle,
 
-                userId:
-                    currentUser.loggedIn
-                        ? currentUser.id
-                        : null
+            playerPoint:playerPoint,
 
-            }
-        );
+            userId:
+                currentUser.loggedIn
+                    ? currentUser.id
+                    : null
+
+        });
 
     }
 
-    document.getElementById(
-        "stats"
-    ).textContent =
-        `speed:${player.speed}___power:${playerPower}___CD:${attackCooldown}ms___EN:${enemies.length}___double jumps:${doubleJumpCount}`;
+
+    const stats =
+        document.getElementById("stats");
+
+
+    if(stats){
+
+        stats.textContent =
+            `speed:${player.speed}` +
+            `___power:${playerPower}` +
+            `___CD:${attackCooldown}ms` +
+            `___EN:${enemies.length}` +
+            `___double jumps:${doubleJumpCount}`;
+
+    }
 
 }
 
-// ======================================================
-// ========================= DRAW ========================
-// ======================================================
+
+// ================= DRAW =================
 
 function draw(){
 
     if(!gameStarted) return;
+
 
     ctx.fillStyle =
         maps[currentMap].bg;
@@ -4568,7 +4529,9 @@ function draw(){
         canvas.height
     );
 
+
     ctx.save();
+
 
     const zoom =
         isMobile ? 0.6 : 1;
@@ -4576,15 +4539,18 @@ function draw(){
     const cameraYOffset =
         isMobile ? -150 : 0;
 
+
     ctx.translate(
         window.innerWidth / 2,
         window.innerHeight / 2
     );
 
+
     ctx.scale(
         zoom,
         zoom
     );
+
 
     ctx.translate(
         -camX -
@@ -4594,13 +4560,14 @@ function draw(){
         cameraYOffset
     );
 
+
     // ================= PLATFORMS =================
 
     const size = 50;
 
+
     for(
-        const p of
-        mapPlatforms[currentMap]
+        const p of mapPlatforms[currentMap]
     ){
 
         if(p.type === "big1"){
@@ -4654,6 +4621,7 @@ function draw(){
             ctx.filter =
                 "brightness(0.2)";
 
+
             for(
                 let x = p.x;
                 x < p.x + p.w;
@@ -4680,6 +4648,7 @@ function draw(){
 
             ctx.filter =
                 "brightness(0.2)";
+
 
             for(
                 let x = p.x;
@@ -4728,6 +4697,7 @@ function draw(){
             ctx.filter =
                 "brightness(1.5)";
 
+
             for(
                 let x = p.x;
                 x < p.x + p.w;
@@ -4750,20 +4720,13 @@ function draw(){
 
     }
 
+
     // ================= PLAYER =================
 
-    if(immortal){
+    ctx.globalAlpha =
+        immortal ? 0.5 : 1;
 
-        ctx.globalAlpha = 0.5;
-
-    }else{
-
-        ctx.globalAlpha = 1;
-
-    }
-
-    ctx.fillStyle =
-        playerColor;
+    ctx.fillStyle = playerColor;
 
     ctx.fillRect(
         player.x,
@@ -4772,9 +4735,8 @@ function draw(){
         player.h
     );
 
-    ctx.strokeStyle =
-        "yellow";
 
+    ctx.strokeStyle = "yellow";
     ctx.lineWidth = 3;
 
     ctx.strokeRect(
@@ -4784,40 +4746,38 @@ function draw(){
         player.h
     );
 
-    ctx.fillStyle =
-        "white";
-
-    ctx.font =
-        "bold 18px Arial";
-
-    ctx.textAlign =
-        "center";
 
     ctx.globalAlpha = 1;
+
 
     const centerX =
         player.x +
         player.w / 2;
+
 
     // ================= PLAYER TITLE =================
 
     const titleImgs =
         titleImages[playerTitle];
 
+
     if(titleImgs){
 
-        const size = 40;
+        const titleSize = 40;
         const gap = 2;
+
 
         const totalWidth =
             titleImgs.length *
-            size +
+            titleSize +
             (titleImgs.length - 1) *
             gap;
+
 
         let startX =
             centerX -
             totalWidth / 2;
+
 
         titleImgs.forEach(img=>{
 
@@ -4827,32 +4787,36 @@ function draw(){
                     img,
                     startX,
                     player.y - 70,
-                    size,
-                    size
+                    titleSize,
+                    titleSize
                 );
 
             }
 
             startX +=
-                size + gap;
+                titleSize + gap;
 
         });
 
     }
 
+
     // ================= NICKNAME =================
 
-    ctx.fillStyle =
-        "white";
+    ctx.fillStyle = "white";
 
     ctx.font =
         "bold 18px Arial";
+
+    ctx.textAlign = "center";
+
 
     ctx.fillText(
         playerNickname,
         centerX,
         player.y - 10
     );
+
 
     // ================= ENEMIES =================
 
@@ -4862,10 +4826,10 @@ function draw(){
 
             if(e.invulnerable){
 
-                ctx.globalAlpha =
-                    0.4;
+                ctx.globalAlpha = 0.4;
 
             }
+
 
             if(e.type === "jumper"){
 
@@ -4873,20 +4837,19 @@ function draw(){
                     "yellow";
 
             }
-
             else if(e.type === "fast"){
 
                 ctx.fillStyle =
                     "purple";
 
             }
-
             else{
 
                 ctx.fillStyle =
                     "blue";
 
             }
+
 
             ctx.fillRect(
                 e.x,
@@ -4895,7 +4858,9 @@ function draw(){
                 e.h
             );
 
+
             ctx.globalAlpha = 1;
+
 
             if(e.attacking){
 
@@ -4904,19 +4869,22 @@ function draw(){
 
                 ctx.lineWidth = 6;
 
+
                 const y =
-                    e.y +
-                    e.h / 2;
+                    e.y + e.h / 2;
+
 
                 const x1 =
                     e.dir === 1
                         ? e.x + e.w
                         : e.x;
 
+
                 const x2 =
                     e.dir === 1
                         ? x1 + 60
                         : x1 - 60;
+
 
                 ctx.beginPath();
 
@@ -4938,6 +4906,7 @@ function draw(){
 
     }
 
+
     // ================= PLAYER ATTACK =================
 
     if(player.attacking){
@@ -4947,19 +4916,23 @@ function draw(){
 
         ctx.lineWidth = 6;
 
+
         const y =
             player.y +
             player.h / 2;
+
 
         const x1 =
             player.dir === 1
                 ? player.x + player.w
                 : player.x;
 
+
         const x2 =
             player.dir === 1
                 ? x1 + attackRange
                 : x1 - attackRange;
+
 
         ctx.beginPath();
 
@@ -4977,26 +4950,30 @@ function draw(){
 
     }
 
+
     // ================= OTHER PLAYERS =================
 
     for(
-        const id in
-        (otherPlayers || {})
+        const id in (otherPlayers || {})
     ){
 
         if(id === socket.id)
             continue;
 
+
         const p =
             otherPlayers[id];
 
+
         if(p.map !== currentMap)
             continue;
+
 
         ctx.globalAlpha =
             currentMap === 3
                 ? 1
                 : 0.3;
+
 
         ctx.fillStyle =
             "white";
@@ -5007,14 +4984,17 @@ function draw(){
         ctx.textAlign =
             "center";
 
+
         ctx.fillText(
-            p.nickname,
+            p.nickname || "Player",
             p.x + 20,
             p.y - 10
         );
 
+
         ctx.fillStyle =
-            p.color;
+            p.color || "#ff0000";
+
 
         ctx.fillRect(
             p.x,
@@ -5023,10 +5003,12 @@ function draw(){
             40
         );
 
+
         ctx.strokeStyle =
             "rgba(120,120,120,0.9)";
 
         ctx.lineWidth = 3;
+
 
         ctx.strokeRect(
             p.x,
@@ -5035,28 +5017,31 @@ function draw(){
             40
         );
 
-        // ================= OTHER TITLE =================
+
+        // ===== TITLE =====
 
         const otherTitleImgs =
             titleImages[p.playerTitle];
 
+
         if(otherTitleImgs){
 
-            const size = 40;
+            const titleSize = 40;
             const gap = 2;
+
 
             const totalWidth =
                 otherTitleImgs.length *
-                size +
-                (
-                    otherTitleImgs.length - 1
-                ) *
+                titleSize +
+                (otherTitleImgs.length - 1) *
                 gap;
+
 
             let startX =
                 p.x +
                 20 -
                 totalWidth / 2;
+
 
             otherTitleImgs.forEach(img=>{
 
@@ -5066,14 +5051,14 @@ function draw(){
                         img,
                         startX,
                         p.y - 70,
-                        size,
-                        size
+                        titleSize,
+                        titleSize
                     );
 
                 }
 
                 startX +=
-                    size + gap;
+                    titleSize + gap;
 
             });
 
@@ -5081,114 +5066,47 @@ function draw(){
 
     }
 
+
+    ctx.globalAlpha = 1;
+
     ctx.restore();
 
 }
 
-// ======================================================
-// ================= SOCKET EVENTS ======================
-// ======================================================
 
-if(typeof socket !== "undefined"){
+// ================= LOAD / LOGIN =================
 
-    socket.on(
-        "players",
-        (playersData)=>{
+window.addEventListener(
+    "load",
+    async () => {
+
+        console.log("PAGE LOADED");
+
+        try{
+
+            restoreLogin();
 
             if(
-                typeof otherPlayers !==
-                "undefined"
+                localStorage.getItem("token")
             ){
 
-                otherPlayers =
-                    playersData;
+                await loadGame();
 
             }
 
         }
-    );
+        catch(err){
 
-    socket.on(
-        "damage",
-        (data)=>{
-
-            if(!data) return;
-
-            player.knockX =
-                data.knockX || 0;
-
-            player.knockY =
-                data.knockY || 0;
-
-            lastAttackerId =
-                data.attackerId || null;
-
-        }
-    );
-
-    socket.on(
-        "pointsReward",
-        (data)=>{
-
-            if(!data) return;
-
-            points +=
-                data.amount1 || 0;
-
-            coins +=
-                data.amount2 || 0;
-
-            document.getElementById(
-                "points"
-            ).textContent =
-                points;
-
-            document.getElementById(
-                "coins"
-            ).textContent =
-                coins;
-
-            updatePlayerTitle();
-
-            saveGame();
-
-        }
-    );
-
-    // ================= CHAT =================
-
-    socket.on(
-        "chatMessage",
-        (data)=>{
-
-            console.log(
-                "CHAT:",
-                data
+            console.error(
+                "INITIAL LOAD ERROR:",
+                err
             );
 
-            addChatMessage(data);
-
         }
-    );
 
-}
-
-
-// ======================================================
-// ================= LOGIN / LOAD ========================
-// ======================================================
-
-window.addEventListener(
-    "load",
-    async ()=>{
-
-        restoreLogin();
-
-        await loadGame();
-
-    }
+    },
+    { once:true }
 );
-
 
 // ======================================================
 // ========================= LOOP ========================
