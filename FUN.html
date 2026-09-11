@@ -545,81 +545,6 @@ canvas {
     height:50px;
 }
 
-#chat {
-    position: fixed;
-    left: 20px;
-    bottom: 20px;
-
-    width: 320px;
-    height: 300px;
-
-    background: rgba(0, 0, 0, 0.75);
-
-    border: 2px solid white;
-    border-radius: 10px;
-
-    z-index: 9999;
-
-    display: flex;
-    flex-direction: column;
-
-    color: white;
-    font-family: Arial, sans-serif;
-}
-
-#chatMessages {
-    flex: 1;
-
-    padding: 10px;
-
-    overflow-y: auto;
-
-    word-wrap: break-word;
-}
-
-.chatMessage {
-    margin-bottom: 7px;
-}
-
-.chatNickname {
-    font-weight: bold;
-}
-
-.chatInputBox {
-    display: flex;
-}
-
-#chatInputBox {
-    display: flex;
-
-    padding: 7px;
-
-    gap: 5px;
-}
-
-#chatInput {
-    flex: 1;
-
-    min-width: 0;
-
-    padding: 8px;
-
-    border: none;
-    border-radius: 5px;
-
-    outline: none;
-}
-
-#chatInputBox button {
-    padding: 8px 10px;
-
-    border: none;
-    border-radius: 5px;
-
-    cursor: pointer;
-}
-
-
 </style>
 </head>
 
@@ -846,2187 +771,1416 @@ canvas {
     <button id="attackBtn">⚔</button>
 </div>
 
-<div id="chat">
-
-    <div id="chatMessages"></div>
-
-    <div id="chatInputBox">
-
-        <input
-            id="chatInput"
-            type="text"
-            maxlength="200"
-            placeholder="Напишите сообщение..."
-            autocomplete="off"
-        >
-
-        <button onclick="sendChatMessage()">
-            Отправить
-        </button>
-
-    </div>
-
-</div>
-
-
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <script>
-
-// ============================================================
-// GLOBAL
-// ============================================================
-
-let socket = io();
-
-let playerNickname = "Player";
-let playerColor = "#ff0000";
-
-let gameStarted = false;
+const socket = io(window.location.origin);
 
 let currentUser = {
-    nickname: null,
     id: null,
+    nickname: null,
     loggedIn: false
 };
 
-let currentMap = 0;
+socket.on("connect", () => {
+    console.log("CONNECTED:", socket.id);
+});
 
+let otherPlayers = {};
+
+socket.on("players", (data) => {
+    if (!data || typeof data !== "object") return;
+    otherPlayers = data;
+});
+socket.on("damage",(data)=>{
+
+    if(immortal){
+        return;
+    }
+
+    player.knockX = data.knockX;
+    player.knockY = data.knockY;
+
+    lastAttackerId = data.attackerId;
+
+});
+socket.on("pointsReward", data => {
+    console.log("Получена награда:", data);
+
+    points += data.amount1;
+    document.getElementById("points").textContent = points;
+    coins += data.amount2;
+    document.getElementById("coins").textContent = coins;
+
+    updatePlayerTitle();
+    saveGame();
+});
+
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const keys = {};
+
+window.addEventListener("keydown", (e) => {
+
+    if (!gameStarted) return;
+
+    if(e.code === "Space"){
+        if(player.grounded){
+        
+            player.vy = -player.jump;
+        
+        }
+        else if(doubleJumpCount > 0){
+        
+            player.vy = -player.jump;
+        
+            doubleJumpCount--;
+        
+        }
+    }
+
+});
+
+document.addEventListener("keydown", e => {
+    if(e.repeat) return;
+
+    keys[e.code] = true;
+
+    if(e.code === "KeyF"){
+        toggleFullscreen();
+    }
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.code] = false;
+});
+
+let playerColor = "red";
+let playerNickname = "Player";
 let playerTitle = "beginner lvl.1";
 let playerPoint = 1;
+let gameStarted = false;
 
-let points = 0;
+let inClan = false;
+let clanOwner = false;
+
+let canHitPlayer = true;
+let pvpHitCooldown = 0;
+let lastAttackerId = null;
+
+const big1PlatformImg = new Image();
+big1PlatformImg.src = "funpng/plat0102.png";
+
+const small1PlatformImg = new Image();
+small1PlatformImg.src = "funpng/plat0101.png";
+
+
+const big2PlatformImg = new Image();
+big2PlatformImg.src = "funpng/plat0301.png";
+
+const small2PlatformImg = new Image();
+small2PlatformImg.src = "funpng/plat0301.png";
+
+
+const big3PlatformImg = new Image();
+big3PlatformImg.src = "funpng/plat0201.png";
+
+const small3PlatformImg = new Image();
+small3PlatformImg.src = "funpng/plat0202.png";
+
+
+const small01PlatformImg = new Image();
+small01PlatformImg.src = "funpng/plat0301.png";
+
+
+const titleImages = {};
+
+function loadTitle(name, paths){
+
+    titleImages[name] = [];
+
+    paths.forEach(path => {
+
+        const img = new Image();
+        img.src = path;
+
+        titleImages[name].push(img);
+
+    });
+
+}
+
+loadTitle(
+    "beginner lvl.1",
+    [
+        "funpng/beginner.png"
+    ]
+);
+loadTitle(
+    "beginner lvl.2",
+    [
+        "funpng/beginner.png",
+        "funpng/beginner.png"
+    ]
+);
+loadTitle(
+    "beginner lvl.3",
+    [
+        "funpng/beginner.png",
+        "funpng/beginner.png",
+        "funpng/beginner.png"
+    ]
+);
+loadTitle(
+    "player lvl.1",
+    [
+        "funpng/player.png"
+    ]
+);
+loadTitle(
+    "player lvl.2",
+    [
+        "funpng/player.png",
+        "funpng/player.png"
+    ]
+);
+loadTitle(
+    "player lvl.3",
+    [
+        "funpng/player.png",
+        "funpng/player.png",
+        "funpng/player.png"
+    ]
+);
+loadTitle(
+    "pro lvl.1",
+    [
+        "funpng/pro.png"
+    ]
+);
+loadTitle(
+    "pro lvl.2",
+    [
+        "funpng/pro.png",
+        "funpng/pro.png"
+    ]
+);
+loadTitle(
+    "pro lvl.3",
+    [
+        "funpng/pro.png",
+        "funpng/pro.png",
+        "funpng/pro.png"
+    ]
+);
+loadTitle(
+    "expert lvl.1",
+    [
+        "funpng/expert.png"
+    ]
+);
+loadTitle(
+    "expert lvl.2",
+    [
+        "funpng/expert.png",
+        "funpng/expert.png"
+    ]
+);
+loadTitle(
+    "expert lvl.3",
+    [
+        "funpng/expert.png",
+        "funpng/expert.png",
+        "funpng/expert.png"
+    ]
+);
+loadTitle(
+    "master lvl.1",
+    [
+        "funpng/master.png"
+    ]
+);
+loadTitle(
+    "master lvl.2",
+    [
+        "funpng/master.png",
+        "funpng/master.png"
+    ]
+);
+loadTitle(
+    "master lvl.3",
+    [
+        "funpng/master.png",
+        "funpng/master.png",
+        "funpng/master.png"
+    ]
+);
+loadTitle(
+    "GRAND MASTER",
+    [
+        "funpng/grandmaster.png"
+    ]
+);
+
+
+
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", resizeCanvas);
+resizeCanvas();
+
+let currentMap = 0;
+
+const maps = [
+    {
+        bg: "#87CEEB",
+        platformColor: "green"
+    },
+    {
+        bg: "#ff9900",
+        platformColor: "#000000"
+    },
+    {
+        bg: "#110011",
+        platformColor: "#ffddff"
+    },
+    {
+        bg: "#333333",
+        platformColor: "#dddddd"
+    }
+];
+
+const mapEnemies = [
+    [],
+    [],
+    [],
+    []
+];
+
+const isMobile =
+    /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i
+    .test(navigator.userAgent);
+
+if(isMobile){
+
+    document.getElementById("mobileControls").style.display = "flex";
+
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    const jumpBtn = document.getElementById("jumpBtn");
+    const attackBtn = document.getElementById("attackBtn");
+
+    leftBtn.addEventListener("touchstart", e=>{
+        e.preventDefault();
+        keys["ArrowLeft"] = true;
+    });
+
+    leftBtn.addEventListener("touchend", ()=>{
+        keys["ArrowLeft"] = false;
+    });
+
+    rightBtn.addEventListener("touchstart", e=>{
+        e.preventDefault();
+        keys["ArrowRight"] = true;
+    });
+
+    rightBtn.addEventListener("touchend", ()=>{
+        keys["ArrowRight"] = false;
+    });
+
+    jumpBtn.addEventListener("touchstart", e=>{
+        e.preventDefault();
+        keys["Space"] = true;
+    });
+
+    jumpBtn.addEventListener("touchend", ()=>{
+        keys["Space"] = false;
+    });
+
+    attackBtn.addEventListener("touchstart", e=>{
+        e.preventDefault();
+        attack();
+    });
+}
+
+function toggleFullscreen(){
+    if(!document.fullscreenElement){
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+function resizeCanvas(){
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+// ================= CAMERA =================
+let camX = 0;
+
+// ================= PLAYER =================
+const player = {
+    x: 3000,
+    y: 100,
+    w: 40,
+    h: 40,
+
+    vx: 0,
+    vy: 0,
+
+    speed: 6,
+    jump: 14,
+
+    grounded: false,
+    dir: 1,
+
+    knockX: 0,
+    knockY: 0,
+
+    attacking: false,
+    attackTime: 0,
+    lastAttack: 0,
+    attackCooldown: 0
+};
+
 let coins = 0;
-let level = 1;
+let points = 0;
 
 let playerPower = 100;
 let attackCooldown = 800;
 let attackRange = 50;
-
 let enemyPowerNerf = 1;
+
+let invincible = false;
+let invincibleTimer = 0;
+let freezeHit = false;
+let shield = false;
+let shieldTimer = 0;
+
+let level = 1;
+
+let enemySpawnCounter = 0;
 
 let speedPrice = 100;
 let powerPrice = 200;
 let attackSpeedPrice = 250;
 let attackRangePrice = 250;
 let nerfPrice = 300;
+let immortalPrice = 50;
+let doubleJumpPrice = 20;
 
 let immortal = false;
 let immortalTimer = 0;
 
-let invincible = false;
-let invincibleTimer = 0;
-
-let freezeHit = false;
-
-let shield = false;
-let shieldTimer = 0;
-
-let doubleJump = false;
+let doubleJump = false; 
 let doubleJumpCount = 0;
 
-let inClan = false;
-let clanOwner = false;
+// ================= ENEMIES =================
+const enemies = [
+    makeEnemy(1900, 3.2, 80),
+    makeEnemy(1700, 2.0, 110),
+    makeEnemy(1500, 1.6, 140),
 
-let pvpHitCooldown = 0;
-let lastAttackerId = null;
+    makeJumpEnemy(4200, 1.7, 90),
+    makeJumpEnemy(4400, 1.0, 120),
 
-let otherPlayers = {};
+    makeFastEnemy(2500, 5.4, 30),
+    makeFastEnemy(3000, 5.2, 40),
+    makeFastEnemy(3900, 5.0, 50),
+];
 
-let camX = 0;
+function makeEnemy(x, speed, power){
+    return {
+        startX: x,
+        startY: 100,
 
-let enemies = [];
+        x, y: 100,
+        w: 40,
+        h: 40,
 
-let keys = {};
+        vx: 0,
+        vy: 0,
 
+        speed,
+        power,
 
-// ============================================================
-// CHAT
-// ============================================================
+        dir: -1,
 
-let chatMessages = [];
-let chatOpen = false;
+        knockX: 0,
+        knockY: 0,
 
+        attacking: false,
+        attackTime: 0,
+        lastAttack: 0,
 
-// Создаём элементы чата автоматически,
-// если их ещё нет в HTML.
-function createChatUI(){
+        stayNearTimer: 0,
+        stayNearLimit: 3 + Math.random() * 2,
 
-    if(document.getElementById("chatBox")){
-        return;
-    }
-
-    const chat = document.createElement("div");
-
-    chat.id = "chatBox";
-
-    chat.style.position = "fixed";
-    chat.style.left = "20px";
-    chat.style.bottom = "20px";
-    chat.style.width = "320px";
-    chat.style.background = "rgba(0,0,0,0.75)";
-    chat.style.color = "white";
-    chat.style.border = "2px solid #555";
-    chat.style.borderRadius = "10px";
-    chat.style.padding = "10px";
-    chat.style.zIndex = "9999";
-    chat.style.fontFamily = "Arial";
-
-    chat.innerHTML = `
-
-        <div
-            id="chatMessages"
-            style="
-                height:180px;
-                overflow-y:auto;
-                margin-bottom:8px;
-                background:rgba(0,0,0,0.3);
-                padding:5px;
-                border-radius:5px;
-            "
-        ></div>
-
-        <div style="display:flex;gap:5px;">
-
-            <input
-                id="chatInput"
-                type="text"
-                maxlength="200"
-                placeholder="Написать сообщение..."
-                style="
-                    flex:1;
-                    padding:7px;
-                    border-radius:5px;
-                    border:1px solid #777;
-                "
-            >
-
-            <button
-                id="chatSendBtn"
-                style="
-                    padding:7px 10px;
-                    cursor:pointer;
-                "
-            >
-                ➤
-            </button>
-
-        </div>
-    `;
-
-    document.body.appendChild(chat);
-
-
-    document
-        .getElementById("chatSendBtn")
-        .addEventListener("click", sendChatMessage);
-
-
-    document
-        .getElementById("chatInput")
-        .addEventListener("keydown", e => {
-
-            if(e.key === "Enter"){
-                e.preventDefault();
-                sendChatMessage();
-            }
-
-        });
-
-
-    renderChat();
+        invulnerable: false,
+        invulnerableTimer: 0,
+    };
 }
 
+function makeJumpEnemy(x, speed, power){
+    return {
+        type: "jumper",
 
-function sendChatMessage(){
+        startX: x,
+        startY: 100,
 
-    const input =
-        document.getElementById("chatInput");
+        x, y: 100,
+        w: 40,
+        h: 40,
 
-    if(!input) return;
+        vx: 0,
+        vy: 0,
 
-    const text =
-        input.value.trim();
+        speed,
+        power,
 
-    if(!text) return;
+        dir: -1,
 
+        knockX: 0,
+        knockY: 0,
 
-    if(text.length > 200){
+        attacking: false,
+        attackTime: 0,
+        lastAttack: 0,
+
+        grounded: false,
+        jumpTimer: 0,
+
+        stayNearTimer: 0,
+        stayNearLimit: 3 + Math.random() * 2,
+
+        invulnerable: false,
+        invulnerableTimer: 0,
+    };
+}
+
+function makeFastEnemy(x, speed, power){
+    return {
+        type: "fast",
+
+        startX: x,
+        startY: 100,
+
+        x,
+        y: 100,
+
+        w: 30,
+        h: 30,
+
+        vx: 0,
+        vy: 0,
+
+        speed,
+        power,
+
+        dir: -1,
+
+        knockX: 0,
+        knockY: 0,
+
+        attacking: false,
+        attackTime: 0,
+        lastAttack: 0,
+
+        grounded: false,
+
+        stayNearTimer: 0,
+        stayNearLimit: 3 + Math.random() * 2,
+
+        invulnerable: false,
+        invulnerableTimer: 0,
+    };
+}
+
+const gravity = 0.7;
+
+// ================= PLATFORMS (×3) =================
+const mapPlatforms = [
+
+    // Карта 1
+    [
+        {x:1500, y:600, w:3000, h:50, type:"big1"},
+        {x:2500, y:500, w:1000, h:20, type:"small1"},
+        {x:3500, y:400, w:1000, h:20, type:"small1"},
+        {x:1500, y:400, w:1000, h:20, type:"small1"}
+    ],
+
+    // Карта 2
+    [
+        {x:1500, y:600, w:3000, h:50, type:"big2"},
+        {x:2500, y:500, w:600, h:20, type:"small2"},
+        {x:3500, y:500, w:600, h:20, type:"small2"},
+        {x:1500, y:500, w:600, h:20, type:"small2"},
+
+        {x:2000, y:400, w:600, h:20, type:"small2"},
+        {x:3000, y:400, w:600, h:20, type:"small2"}
+    ],
+
+    // Карта 3
+    [
+        {x:1500, y:600, w:3000, h:50, type:"big3"},
+        {x:2500, y:400, w:500, h:20, type:"small3"},
+        {x:3500, y:400, w:500, h:20, type:"small3"},
+        {x:1500, y:400, w:500, h:20, type:"small3"},
+
+        {x:2000, y:500, w:500, h:20, type:"small3"},
+        {x:3000, y:500, w:500, h:20, type:"small3"},
+        {x:4000, y:500, w:500, h:20, type:"small3"},
+        {x:2000, y:300, w:500, h:20, type:"small3"},
+        {x:3000, y:300, w:500, h:20, type:"small3"},
+        {x:4000, y:300, w:500, h:20, type:"small3"}
+    ],
+
+    // Arena
+    [
+        {x:2500, y:600, w:500, h:20, type:"small01"},
+        {x:3500, y:600, w:500, h:20, type:"small01"},
+        {x:1500, y:600, w:500, h:20, type:"small01"},
+
+        {x:2500, y:400, w:500, h:20, type:"small01"},
+        {x:3500, y:400, w:500, h:20, type:"small01"},
+        {x:1500, y:400, w:500, h:20, type:"small01"},
+
+        {x:2000, y:500, w:500, h:20, type:"small01"},
+        {x:3000, y:500, w:500, h:20, type:"small01"},
+        {x:4000, y:500, w:500, h:20, type:"small01"},
+        {x:2000, y:300, w:500, h:20, type:"small01"},
+        {x:3000, y:300, w:500, h:20, type:"small01"},
+        {x:4000, y:300, w:500, h:20, type:"small01"}
+    ]
+];
+
+// ================= INPUT =================
+function attack(){
+    const now = Date.now();
+
+    if(now - player.lastAttack > attackCooldown){
+        player.attacking = true;
+        player.attackTime = 5;
+        player.lastAttack = now;
+        
+        const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/b162cc9c34050ce.mp3");
+        audio.play()
+    }
+}
+
+function enemyAttack(e){
+    const now = Date.now();
+
+    const cooldown =
+        e.type === "fast"
+        ? 500
+        : 700;
+
+    if(now - e.lastAttack > cooldown){
+        e.attacking = true;
+        e.attackTime = 10;
+        e.lastAttack = now;
+        
+        const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/0f9470e818805fc.mp3");
+        audio.play()
+    }
+}
+
+// ================= COLLISION =================
+function move(obj, delta){
+
+    let nextX = obj.x + (obj.vx + obj.knockX) * delta;
+    let nextY = obj.y + (obj.vy + obj.knockY) * delta;
+
+    obj.grounded = false;
+
+    for(const p of mapPlatforms[currentMap]){
+
+        const centerX = nextX + obj.w / 2;
+
+        if(
+            centerX > p.x &&
+            centerX < p.x + p.w &&
+            obj.y + obj.h <= p.y &&
+            nextY + obj.h >= p.y
+        ){
+            nextY = p.y - obj.h;
+            obj.vy = 0;
+            obj.grounded = true;
+        }
+    }
+
+    obj.x = nextX;
+    obj.y = nextY;
+
+    obj.knockX *= 0.85;
+    obj.knockY *= 0.85;
+}
+
+// ================= HIT =================
+function hit(a,b){
+    return a.x < b.x + b.w &&
+           a.x + a.w > b.x &&
+           a.y < b.y + b.h &&
+           a.y + a.h > b.y;
+}
+
+let shopOpen = false;
+
+function toggleShop(){
+    shopOpen = !shopOpen;
+    document.getElementById("shop").style.display = shopOpen ? "flex" : "none";
+}
+
+const tracks = [
+    new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/Boom_Kitty_-_Power_Trip.mp3"),
+    new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/Boom_Kitty_-_It_Takes_Me_feat_Waylon_Reavis_(SkySound.cc).mp3"),
+    new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/Boom_Kitty_-_Dont_Question_Me.mp3"),
+];
+
+tracks.forEach(t => {
+    t.loop = true;
+    t.volume = 0.5;
+});
+
+let currentTrack = null;
+
+function startGame(){
+
+    if(!localStorage.getItem("token")){
+        alert("Сначала войдите в аккаунт!");
+        return;
+    }
+
+    const enteredNick =
+        document.getElementById("nicknameInput").value.trim();
+
+    if(enteredNick){
+        playerNickname = enteredNick;
+    }
+
+    playerColor =
+        document.getElementById("playerColorPicker").value;
+
+    saveGame();
+
+    document.getElementById("startMenu").style.display = "none";
+
+    gameStarted = true;
+
+    updateShopPrices();
+    updatePlayerTitle();
+    updateEnemyCount();
+
+    requestAnimationFrame(loop);
+}
+
+async function createAccount() {
+
+    alert("createAccount");
+
+    const nickname = document.getElementById("nicknameInput").value.trim();
+    const password = document.getElementById("passwordInput").value.trim();
+
+    try {
+
+        console.log("Отправляем запрос...");
+
+        const res = await fetch("/register", {
+            method: "POST",
+            headers: {
+                "Content-Type":"application/json"
+            },
+            body: JSON.stringify({
+                nickname,
+                password
+            })
+        });
+
+        console.log("STATUS:", res.status);
+
+        const data = await res.json();
+
+        console.log(data);
+
+        alert(JSON.stringify(data));
+
+    } catch(err) {
+
+        console.error(err);
+
+        alert("ERROR:\n" + err.message);
+    }
+}
+
+async function loginAccount() {
+    try {
+        const nickname = document.getElementById("nicknameInput").value;
+        const password = document.getElementById("passwordInput").value;
+
+        const res = await fetch("/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ nickname, password })
+        });
+
+        const data = await res.json();
+
+        console.log("LOGIN RESPONSE:", data);
+
+        alert(JSON.stringify(data));
+
+        if (data.token) {
+            currentUser.nickname = data.nickname;
+            currentUser.id = data.id;
+            currentUser.loggedIn = true;
+        
+            localStorage.setItem("token", data.token);
+
+            loadGame();
+
+            socket.emit("setPlayerData", {
+                userId: currentUser.id,
+                nickname: currentUser.nickname
+            });
+
+            localStorage.setItem("account", JSON.stringify({
+                nickname: data.nickname,
+                id: data.id,
+                password: password,
+                loggedIn: true
+            }));
+
+            alert("LOGIN SUCCESS");
+            document.getElementById("accountInfoBtn").style.display = "block";
+            document.getElementById("deleteAccountBtn").style.display = "block";
+            updateClanUI();
+            updatePlayerTitle();
+        } else {
+            alert("NO TOKEN");
+        }
+
+    } catch (err) {
+        alert("LOGIN ERROR: " + err);
+    }
+}
+
+function restoreLogin() {
+
+    const token = localStorage.getItem("token");
+    const account = localStorage.getItem("account");
+
+    if (!token || !account) return;
+
+    try {
+
+        const data = JSON.parse(account);
+
+        currentUser.nickname = data.nickname;
+        currentUser.id = data.id;
+        currentUser.loggedIn = true;
+
+        playerNickname = data.nickname;
+
+        document.getElementById("nicknameInput").value = data.nickname;
+
+        document.getElementById("accountInfoBtn").style.display = "block";
+        document.getElementById("deleteAccountBtn").style.display = "block";
+
+    } catch (e) {
+        localStorage.removeItem("account");
+        localStorage.removeItem("token");
+    }
+}
+
+async function deleteAccount(){
+
+    const token = localStorage.getItem("token");
+
+    if(!token){
+        alert("Нет входа в аккаунт");
+        return;
+    }
+
+    if(!confirm("Удалить аккаунт навсегда?")) return;
+
+    try {
+
+        const res = await fetch("/account", {
+            method:"DELETE",
+            headers:{
+                "Authorization": token
+            }
+        });
+
+        console.log("STATUS:", res.status);
+
+        const data = await res.json();
+
+        console.log("DELETE RESPONSE:", data);
+
+        if(data.success){
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("account");
+            localStorage.removeItem("FUN_ACCOUNT");
+
+            currentUser.nickname = null;
+            currentUser.id = null;
+            currentUser.loggedIn = false;
+
+            alert("Аккаунт удалён");
+            
+            document.getElementById("accountInfoBtn").style.display = "none";
+            document.getElementById("deleteAccountBtn").style.display = "none";
+
+            location.reload();
+
+        } else {
+
+            alert("Ошибка удаления: " + JSON.stringify(data));
+
+        }
+
+    } catch(err){
+
+        console.error(err);
+
+        alert("DELETE ERROR: " + err.message);
+
+    }
+}
+
+function logoutAccount(){
+    document.getElementById("nicknameInput").value = "";
+    document.getElementById("passwordInput").value = "";
+
+    playerNickname = "Player";
+
+    alert("Вы вышли из аккаунта!");
+
+    currentUser.nickname = null;
+    currentUser.id = null;
+    currentUser.loggedIn = false;
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("account");
+
+    document.getElementById("accountInfoBtn").style.display = "none";
+    document.getElementById("deleteAccountBtn").style.display = "none";
+}
+
+function showAccountInfo(){
+
+    if(!currentUser.loggedIn){
+        alert("Ты не вошёл в аккаунт!");
+        return;
+    }
+
+    alert(
+        "Nick: " + currentUser.nickname + "\n" +
+        "ID: " + currentUser.id
+    );
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const passwordInput = document.getElementById("passwordInput");
+    const showPassword = document.getElementById("showPassword");
+
+    showPassword.addEventListener("change", () => {
+        passwordInput.type = showPassword.checked
+            ? "text"
+            : "password";
+    });
+});
+
+async function searchPlayer(){
+
+    console.log("SEARCH CLICK");
+
+    const query = document
+        .getElementById("searchPlayerInput")
+        .value
+        .trim();
+
+    console.log("QUERY:", query);
+
+    if(!query) return;
+
+    const result = document.getElementById("searchResult");
+
+    result.innerHTML = "Поиск...";
+
+    try{
+
+        const res = await fetch("/player/" + encodeURIComponent(query));
+
+        console.log("STATUS:", res.status);
+
+        const data = await res.json();
+
+        console.log("PLAYER SEARCH:", data);
+
+        if(!data.success){
+            result.innerHTML = "<span style='color:red'>Игрок не найден.</span>";
+            return;
+        }
+
+        result.innerHTML = `
+            <h3>${data.nickname}</h3>
+            <p><b>Title:</b> ${data.playerTitle}</p>
+            <p><b>ID:</b> ${data.id}</p>
+            <p><b>Level:</b> ${data.level}</p>
+            <p><b>Points:</b> ${data.points}</p>
+            <p><b>Coins:</b> ${data.coins}</p>
+            <p><b>Speed:</b> ${data.playerspeed}</p>
+            <p><b>Power:</b> ${data.playerpower}</p>
+            <p><b>Attack Speed:</b> ${data.attackcooldown}</p>
+            <p><b>Attack Range:</b> ${data.attackrange}</p>
+        `;
+
+    }catch(err){
+
+        console.log("SEARCH ERROR:", err);
+
+        result.innerHTML =
+            "<span style='color:red'>Ошибка соединения с сервером.</span>";
+
+    }
+}
+
+function openCreateClan(){
+    if (document.getElementById("createClanMenu").style.display === "none"){
+        document.getElementById("createClanMenu").style.display = "flex";
+    }else{
+        document.getElementById("createClanMenu").style.display = "none";
+    }
+
+}
+
+async function createClan(){
+
+    const token = localStorage.getItem("token");
+
+    if(!token){
+        alert("Войдите в аккаунт");
+        return;
+    }
+
+    if(coins < 500){
+        alert("Нужно 500 монет");
+        return;
+    }
+
+    const name =
+        document.getElementById("clanNameInput").value.trim();
+
+    if(!name){
+        alert("Введите название клана");
         return;
     }
 
 
-    socket.emit("chatMessage", {
+    const res = await fetch("/clan/create",{
 
-        nickname: playerNickname,
+        method:"POST",
 
-        message: text
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":token
+        },
+
+        body:JSON.stringify({
+            name
+        })
 
     });
 
 
-    input.value = "";
+    const data = await res.json();
+
+
+    if(data.success){
+
+        coins -= 500;
+        
+        document.getElementById("clantext").style.display = "block";
+
+        saveGame();
+
+        alert("Клан создан!");
+
+        socket.emit("setPlayerData", {
+            userId: currentUser.id,
+            nickname: currentUser.nickname
+        });
+
+        await updateClanUI();
+
+    }else{
+
+        alert(data.error);
+
+    }
 
 }
 
+async function loadClans(){
 
-function renderChat(){
+    const res = await fetch("/clans");
+    const clans = await res.json();
 
-    const box =
-        document.getElementById("chatMessages");
+    const list = document.getElementById("clanList");
+
+    list.innerHTML = "";
+
+    clans.forEach(clan=>{
+
+        list.innerHTML += `
+        <div class="clanItem">
+        
+            <b>${clan.name}</b>
+
+            <br><br>
+        
+            Участников: ${clan.members}
+        
+            <br><br>
+        
+            Игроки:
+
+            <br><br>
+        
+            ${clan.players
+                .map(p => {
+                
+                    if(p.id === clan.owner){
+                    
+                        return `
+                        <span style="
+                            color:yellow;
+                            font-weight:bold;
+                        ">
+                            👑 ${p.nickname}
+                        </span>
+                        `;
+                    
+                    }
+                
+                    return `
+                    <span>
+                        • ${p.nickname}
+                    </span>
+                    `;
+                
+                })
+                .join("<br>")}
+        
+            <br><br>
+        
+            ${!inClan ? `
+            <button onclick="joinClan(${clan.id})">
+                Вступить
+            </button>
+            ` : ""}
+        
+        </div>`;
+    });
+
+}
+
+async function joinClan(id){
+
+    const token =
+        localStorage.getItem("token");
+
+    const res = await fetch("/clan/join",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":token
+        },
+
+        body:JSON.stringify({
+            id:id
+        })
+
+    });
+
+    const data = await res.json();
+
+    alert(data.message);
+
+}
+
+function clanDailyReward(){
+
+    if(!inClan) return;
+
+    const today = new Date().toDateString();
+
+    const lastReward =
+        localStorage.getItem("clanDailyReward");
+
+    if(lastReward === today) return;
+
+    points += 50;
+
+    localStorage.setItem("clanDailyReward", today);
+
+    document.getElementById("points").textContent = points;
+
+    saveGame();
+
+    alert("⭐ Вы получили 50 очков за участие в клане!");
+}
+
+async function leaveClan(){
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("/clan/leave",{
+        method:"POST",
+        headers:{
+            Authorization:token
+        }
+    });
+
+    const data = await res.json();
+
+    alert(data.message);
+
+    if (data.success) {
+        socket.emit("setPlayerData", {
+            userId: currentUser.id,
+            nickname: currentUser.nickname
+        });
+    }
+
+    updateClanUI();
+
+}
+
+async function deleteClan(){
+
+    if(!confirm("Удалить клан?")) return;
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("/clan/delete",{
+        method:"DELETE",
+        headers:{
+            Authorization:token
+        }
+    });
+
+    const data = await res.json();
+
+    alert(data.message);
+
+
+    if(data.success){
+
+        inClan = false;
+        clanOwner = false;
+
+        document.getElementById("clanRequests").innerHTML = "";
+        
+        document.getElementById("clantext").style.display = "block";
+
+        if (data.success) {
+            socket.emit("setPlayerData", {
+                userId: currentUser.id,
+                nickname: currentUser.nickname
+            });
+        }
+
+        await updateClanUI();
+        await loadClans();
+
+    }
+
+}
+
+async function loadClanRequests(){
+
+    const box = document.getElementById("clanRequests");
 
     if(!box) return;
+    
+    if(!clanOwner){
+        box.innerHTML = "";
+        return;
+    }
+
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("/clan/requests",{
+        headers:{
+            Authorization:token
+        }
+    });
+
+
+    const requests = await res.json();
 
 
     box.innerHTML = "";
 
 
-    chatMessages.forEach(msg => {
+    requests.forEach(r=>{
 
-        const div =
-            document.createElement("div");
+        box.innerHTML += `
 
-        div.style.marginBottom = "5px";
+        <div>
 
-        const name =
-            document.createElement("b");
+            ${r.nickname}
 
-        name.textContent =
-            msg.nickname + ": ";
+            <button onclick="acceptClan(${r.id})">
+                ✅ Принять
+            </button>
 
-        const text =
-            document.createElement("span");
 
-        text.textContent =
-            msg.message;
+            <button onclick="rejectClan(${r.id})">
+                ❌ Отклонить
+            </button>
 
-
-        div.appendChild(name);
-        div.appendChild(text);
-
-        box.appendChild(div);
-
-    });
-
-
-    box.scrollTop =
-        box.scrollHeight;
-}
-
-
-socket.on("chatMessage", msg => {
-
-    if(!msg) return;
-
-
-    chatMessages.push({
-
-        nickname:
-            msg.nickname || "Player",
-
-        message:
-            msg.message || ""
-
-    });
-
-
-    // максимум 100 сообщений
-    if(chatMessages.length > 100){
-
-        chatMessages.shift();
-
-    }
-
-
-    renderChat();
-
-});
-
-
-socket.on("chatHistory", messages => {
-
-    if(!Array.isArray(messages)){
-        return;
-    }
-
-
-    chatMessages =
-        messages.slice(-100);
-
-
-    renderChat();
-
-});
-
-
-// ============================================================
-// SOCKET PLAYERS
-// ============================================================
-
-socket.on("players", players => {
-
-    otherPlayers = players || {};
-
-});
-
-
-// ============================================================
-// KEYBOARD
-// ============================================================
-
-window.addEventListener("keydown", e => {
-
-    keys[e.code] = true;
-
-
-    // Если пользователь печатает в поле чата,
-    // игровые клавиши не обрабатываем.
-    if(
-        document.activeElement &&
-        (
-            document.activeElement.id === "chatInput" ||
-            document.activeElement.tagName === "INPUT" ||
-            document.activeElement.tagName === "TEXTAREA"
-        )
-    ){
-        return;
-    }
-
-});
-
-
-window.addEventListener("keyup", e => {
-
-    keys[e.code] = false;
-
-});
-
-
-// ============================================================
-// START GAME
-// ============================================================
-
-function startGame(){
-
-    if(!localStorage.getItem("token")){
-
-        alert("Сначала войдите в аккаунт!");
-
-        return;
-    }
-
-
-    const enteredNick =
-        document
-            .getElementById("nicknameInput")
-            .value
-            .trim();
-
-
-    if(enteredNick){
-
-        playerNickname =
-            enteredNick;
-
-    }
-
-
-    playerColor =
-        document
-            .getElementById("playerColorPicker")
-            .value;
-
-
-    saveGame();
-
-
-    document
-        .getElementById("startMenu")
-        .style.display = "none";
-
-
-    gameStarted = true;
-
-
-    updateShopPrices();
-
-    updatePlayerTitle();
-
-    updateEnemyCount();
-
-
-    requestAnimationFrame(loop);
-
-}
-
-
-// ============================================================
-// REGISTER
-// ============================================================
-
-async function createAccount(){
-
-    const nickname =
-        document
-            .getElementById("nicknameInput")
-            .value
-            .trim();
-
-
-    const password =
-        document
-            .getElementById("passwordInput")
-            .value
-            .trim();
-
-
-    if(!nickname || !password){
-
-        alert("Введите ник и пароль!");
-
-        return;
-    }
-
-
-    try{
-
-        const res =
-            await fetch("/register", {
-
-                method:"POST",
-
-                headers:{
-                    "Content-Type":"application/json"
-                },
-
-                body:JSON.stringify({
-
-                    nickname,
-                    password
-
-                })
-
-            });
-
-
-        const data =
-            await res.json();
-
-
-        console.log(
-            "REGISTER RESPONSE:",
-            data
-        );
-
-
-        if(data.success){
-
-            alert(
-                "Аккаунт создан! Теперь войдите."
-            );
-
-        }else{
-
-            alert(
-                data.error ||
-                "Ошибка регистрации"
-            );
-
-        }
-
-
-    }catch(err){
-
-        console.error(err);
-
-        alert(
-            "Ошибка соединения с сервером"
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// LOGIN
-// ============================================================
-
-async function loginAccount(){
-
-    try{
-
-        const nickname =
-            document
-                .getElementById("nicknameInput")
-                .value
-                .trim();
-
-
-        const password =
-            document
-                .getElementById("passwordInput")
-                .value
-                .trim();
-
-
-        if(!nickname || !password){
-
-            alert(
-                "Введите ник и пароль!"
-            );
-
-            return;
-        }
-
-
-        const res =
-            await fetch("/login", {
-
-                method:"POST",
-
-                headers:{
-                    "Content-Type":"application/json"
-                },
-
-                body:JSON.stringify({
-
-                    nickname,
-                    password
-
-                })
-
-            });
-
-
-        const data =
-            await res.json();
-
-
-        console.log(
-            "LOGIN RESPONSE:",
-            data
-        );
-
-
-        if(!data.token){
-
-            alert(
-                data.error ||
-                "Ошибка входа"
-            );
-
-            return;
-        }
-
-
-        currentUser.nickname =
-            data.nickname;
-
-        currentUser.id =
-            data.id;
-
-        currentUser.loggedIn =
-            true;
-
-
-        playerNickname =
-            data.nickname;
-
-
-        localStorage.setItem(
-            "token",
-            data.token
-        );
-
-
-        localStorage.setItem(
-            "account",
-            JSON.stringify({
-
-                nickname:data.nickname,
-
-                id:data.id,
-
-                loggedIn:true
-
-            })
-        );
-
-
-        await loadGame();
-
-
-        socket.emit(
-            "setPlayerData",
-            {
-
-                userId:
-                    currentUser.id,
-
-                nickname:
-                    currentUser.nickname
-
-            }
-        );
-
-
-        document
-            .getElementById("accountInfoBtn")
-            .style.display = "block";
-
-
-        document
-            .getElementById("deleteAccountBtn")
-            .style.display = "block";
-
-
-        await updateClanUI();
-
-
-        updatePlayerTitle();
-
-
-        alert("Вы вошли в аккаунт!");
-
-
-    }catch(err){
-
-        console.error(
-            "LOGIN ERROR:",
-            err
-        );
-
-
-        alert(
-            "Ошибка входа: " +
-            err.message
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// RESTORE LOGIN
-// ============================================================
-
-function restoreLogin(){
-
-    const token =
-        localStorage.getItem("token");
-
-
-    const account =
-        localStorage.getItem("account");
-
-
-    if(!token || !account){
-
-        return;
-    }
-
-
-    try{
-
-        const data =
-            JSON.parse(account);
-
-
-        currentUser.nickname =
-            data.nickname;
-
-        currentUser.id =
-            data.id;
-
-        currentUser.loggedIn =
-            true;
-
-
-        playerNickname =
-            data.nickname;
-
-
-        const nicknameInput =
-            document.getElementById(
-                "nicknameInput"
-            );
-
-
-        if(nicknameInput){
-
-            nicknameInput.value =
-                data.nickname;
-
-        }
-
-
-        const accountBtn =
-            document.getElementById(
-                "accountInfoBtn"
-            );
-
-
-        if(accountBtn){
-
-            accountBtn.style.display =
-                "block";
-
-        }
-
-
-        const deleteBtn =
-            document.getElementById(
-                "deleteAccountBtn"
-            );
-
-
-        if(deleteBtn){
-
-            deleteBtn.style.display =
-                "block";
-
-        }
-
-
-        socket.emit(
-            "setPlayerData",
-            {
-
-                userId:
-                    currentUser.id,
-
-                nickname:
-                    currentUser.nickname
-
-            }
-        );
-
-
-    }catch(e){
-
-        console.error(e);
-
-        localStorage.removeItem(
-            "account"
-        );
-
-        localStorage.removeItem(
-            "token"
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// DELETE ACCOUNT
-// ============================================================
-
-async function deleteAccount(){
-
-    const token =
-        localStorage.getItem("token");
-
-
-    if(!token){
-
-        alert(
-            "Нет входа в аккаунт"
-        );
-
-        return;
-    }
-
-
-    if(
-        !confirm(
-            "Удалить аккаунт навсегда?"
-        )
-    ){
-
-        return;
-    }
-
-
-    try{
-
-        const res =
-            await fetch("/account", {
-
-                method:"DELETE",
-
-                headers:{
-
-                    "Authorization":
-                        token
-
-                }
-
-            });
-
-
-        const data =
-            await res.json();
-
-
-        if(data.success){
-
-            localStorage.removeItem(
-                "token"
-            );
-
-            localStorage.removeItem(
-                "account"
-            );
-
-
-            currentUser.nickname =
-                null;
-
-            currentUser.id =
-                null;
-
-            currentUser.loggedIn =
-                false;
-
-
-            playerNickname =
-                "Player";
-
-
-            alert(
-                "Аккаунт удалён"
-            );
-
-
-            location.reload();
-
-
-        }else{
-
-            alert(
-                "Ошибка удаления: " +
-                JSON.stringify(data)
-            );
-
-        }
-
-
-    }catch(err){
-
-        console.error(err);
-
-        alert(
-            "DELETE ERROR: " +
-            err.message
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// LOGOUT
-// ============================================================
-
-function logoutAccount(){
-
-    document
-        .getElementById("nicknameInput")
-        .value = "";
-
-
-    document
-        .getElementById("passwordInput")
-        .value = "";
-
-
-    playerNickname =
-        "Player";
-
-
-    currentUser.nickname =
-        null;
-
-    currentUser.id =
-        null;
-
-    currentUser.loggedIn =
-        false;
-
-
-    localStorage.removeItem(
-        "token"
-    );
-
-    localStorage.removeItem(
-        "account"
-    );
-
-
-    document
-        .getElementById(
-            "accountInfoBtn"
-        )
-        .style.display = "none";
-
-
-    document
-        .getElementById(
-            "deleteAccountBtn"
-        )
-        .style.display = "none";
-
-
-    alert(
-        "Вы вышли из аккаунта!"
-    );
-
-}
-
-
-// ============================================================
-// ACCOUNT INFO
-// ============================================================
-
-function showAccountInfo(){
-
-    if(!currentUser.loggedIn){
-
-        alert(
-            "Ты не вошёл в аккаунт!"
-        );
-
-        return;
-    }
-
-
-    alert(
-
-        "Nick: " +
-        currentUser.nickname +
-
-        "\n" +
-
-        "ID: " +
-        currentUser.id
-
-    );
-
-}
-
-
-// ============================================================
-// PASSWORD SHOW/HIDE
-// ============================================================
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        const passwordInput =
-            document.getElementById(
-                "passwordInput"
-            );
-
-
-        const showPassword =
-            document.getElementById(
-                "showPassword"
-            );
-
-
-        if(
-            passwordInput &&
-            showPassword
-        ){
-
-            showPassword.addEventListener(
-                "change",
-                () => {
-
-                    passwordInput.type =
-                        showPassword.checked
-                            ? "text"
-                            : "password";
-
-                }
-            );
-
-        }
-
-
-        createChatUI();
-
-    }
-);
-
-
-// ============================================================
-// PLAYER SEARCH
-// ============================================================
-
-async function searchPlayer(){
-
-    const input =
-        document.getElementById(
-            "searchPlayerInput"
-        );
-
-
-    const result =
-        document.getElementById(
-            "searchResult"
-        );
-
-
-    if(!input || !result){
-
-        return;
-    }
-
-
-    const query =
-        input.value.trim();
-
-
-    if(!query){
-
-        return;
-    }
-
-
-    result.innerHTML =
-        "Поиск...";
-
-
-    try{
-
-        const res =
-            await fetch(
-                "/player/" +
-                encodeURIComponent(query)
-            );
-
-
-        const data =
-            await res.json();
-
-
-        if(!data.success){
-
-            result.innerHTML =
-                "<span style='color:red'>" +
-                "Игрок не найден." +
-                "</span>";
-
-            return;
-        }
-
-
-        result.innerHTML = `
-
-            <h3>${data.nickname}</h3>
-
-            <p>
-                <b>Title:</b>
-                ${data.playerTitle}
-            </p>
-
-            <p>
-                <b>ID:</b>
-                ${data.id}
-            </p>
-
-            <p>
-                <b>Level:</b>
-                ${data.level}
-            </p>
-
-            <p>
-                <b>Points:</b>
-                ${data.points}
-            </p>
-
-            <p>
-                <b>Coins:</b>
-                ${data.coins}
-            </p>
-
-            <p>
-                <b>Speed:</b>
-                ${data.playerspeed}
-            </p>
-
-            <p>
-                <b>Power:</b>
-                ${data.playerpower}
-            </p>
-
-            <p>
-                <b>Attack Speed:</b>
-                ${data.attackcooldown}
-            </p>
-
-            <p>
-                <b>Attack Range:</b>
-                ${data.attackrange}
-            </p>
+        </div>
 
         `;
 
-
-    }catch(err){
-
-        console.error(
-            "SEARCH ERROR:",
-            err
-        );
-
-
-        result.innerHTML =
-            "<span style='color:red'>" +
-            "Ошибка соединения с сервером." +
-            "</span>";
-
-    }
+    });
 
 }
-
-
-// ============================================================
-// CREATE CLAN MENU
-// ============================================================
-
-function openCreateClan(){
-
-    const menu =
-        document.getElementById(
-            "createClanMenu"
-        );
-
-
-    if(!menu) return;
-
-
-    if(
-        menu.style.display === "none" ||
-        menu.style.display === ""
-    ){
-
-        menu.style.display =
-            "flex";
-
-    }else{
-
-        menu.style.display =
-            "none";
-
-    }
-
-}
-
-
-// ============================================================
-// CREATE CLAN
-// ============================================================
-
-async function createClan(){
-
-    const token =
-        localStorage.getItem("token");
-
-
-    if(!token){
-
-        alert(
-            "Войдите в аккаунт"
-        );
-
-        return;
-    }
-
-
-    if(coins < 500){
-
-        alert(
-            "Нужно 500 монет"
-        );
-
-        return;
-    }
-
-
-    const input =
-        document.getElementById(
-            "clanNameInput"
-        );
-
-
-    const name =
-        input.value.trim();
-
-
-    if(!name){
-
-        alert(
-            "Введите название клана"
-        );
-
-        return;
-    }
-
-
-    try{
-
-        const res =
-            await fetch(
-                "/clan/create",
-                {
-
-                    method:"POST",
-
-                    headers:{
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Authorization":
-                            token
-
-                    },
-
-                    body:JSON.stringify({
-                        name
-                    })
-
-                }
-            );
-
-
-        const data =
-            await res.json();
-
-
-        if(data.success){
-
-            coins -= 500;
-
-
-            const clanText =
-                document.getElementById(
-                    "clantext"
-                );
-
-
-            if(clanText){
-
-                clanText.style.display =
-                    "block";
-
-            }
-
-
-            saveGame();
-
-
-            alert(
-                "Клан создан!"
-            );
-
-
-            socket.emit(
-                "setPlayerData",
-                {
-
-                    userId:
-                        currentUser.id,
-
-                    nickname:
-                        currentUser.nickname
-
-                }
-            );
-
-
-            await updateClanUI();
-
-
-        }else{
-
-            alert(
-                data.error ||
-                "Ошибка создания клана"
-            );
-
-        }
-
-
-    }catch(err){
-
-        console.error(err);
-
-        alert(
-            "Ошибка соединения"
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// LOAD CLANS
-// ============================================================
-
-async function loadClans(){
-
-    try{
-
-        const res =
-            await fetch(
-                "/clans"
-            );
-
-
-        const clans =
-            await res.json();
-
-
-        const list =
-            document.getElementById(
-                "clanList"
-            );
-
-
-        if(!list) return;
-
-
-        list.innerHTML = "";
-
-
-        clans.forEach(
-            clan => {
-
-                list.innerHTML += `
-
-                    <div class="clanItem">
-
-                        <b>
-                            ${clan.name}
-                        </b>
-
-                        <br><br>
-
-                        Участников:
-                        ${clan.members}
-
-                        <br><br>
-
-                        Игроки:
-
-                        <br><br>
-
-                        ${clan.players
-                            .map(p => {
-
-                                if(
-                                    p.id ===
-                                    clan.owner
-                                ){
-
-                                    return `
-
-                                        <span
-                                            style="
-                                                color:yellow;
-                                                font-weight:bold;
-                                            "
-                                        >
-                                            👑
-                                            ${p.nickname}
-                                        </span>
-
-                                    `;
-
-                                }
-
-
-                                return `
-
-                                    <span>
-                                        •
-                                        ${p.nickname}
-                                    </span>
-
-                                `;
-
-                            })
-                            .join("<br>")}
-
-                        <br><br>
-
-                        ${
-                            !inClan
-                                ? `
-                                    <button
-                                        onclick="
-                                            joinClan(
-                                                ${clan.id}
-                                            )
-                                        "
-                                    >
-                                        Вступить
-                                    </button>
-                                `
-                                : ""
-                        }
-
-                    </div>
-
-                `;
-
-            }
-        );
-
-
-    }catch(err){
-
-        console.error(
-            "LOAD CLANS ERROR:",
-            err
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// JOIN CLAN
-// ============================================================
-
-async function joinClan(id){
-
-    const token =
-        localStorage.getItem(
-            "token"
-        );
-
-
-    if(!token){
-
-        alert(
-            "Войдите в аккаунт"
-        );
-
-        return;
-    }
-
-
-    try{
-
-        const res =
-            await fetch(
-                "/clan/join",
-                {
-
-                    method:"POST",
-
-                    headers:{
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Authorization":
-                            token
-
-                    },
-
-                    body:JSON.stringify({
-                        id
-                    })
-
-                }
-            );
-
-
-        const data =
-            await res.json();
-
-
-        alert(
-            data.message ||
-            data.error ||
-            "Готово"
-        );
-
-
-        if(data.success){
-
-            await updateClanUI();
-
-        }
-
-
-    }catch(err){
-
-        console.error(err);
-
-        alert(
-            "Ошибка соединения"
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// CLAN DAILY REWARD
-// ============================================================
-
-function clanDailyReward(){
-
-    if(!inClan){
-
-        return;
-    }
-
-
-    const today =
-        new Date().toDateString();
-
-
-    const lastReward =
-        localStorage.getItem(
-            "clanDailyReward"
-        );
-
-
-    if(lastReward === today){
-
-        return;
-    }
-
-
-    points += 50;
-
-
-    localStorage.setItem(
-        "clanDailyReward",
-        today
-    );
-
-
-    const pointsElement =
-        document.getElementById(
-            "points"
-        );
-
-
-    if(pointsElement){
-
-        pointsElement.textContent =
-            points;
-
-    }
-
-
-    saveGame();
-
-    updatePlayerTitle();
-
-
-    alert(
-        "⭐ Вы получили 50 очков за участие в клане!"
-    );
-
-}
-
-
-// ============================================================
-// LEAVE CLAN
-// ============================================================
-
-async function leaveClan(){
-
-    const token =
-        localStorage.getItem(
-            "token"
-        );
-
-
-    if(!token){
-
-        return;
-    }
-
-
-    try{
-
-        const res =
-            await fetch(
-                "/clan/leave",
-                {
-
-                    method:"POST",
-
-                    headers:{
-
-                        "Authorization":
-                            token
-
-                    }
-
-                }
-            );
-
-
-        const data =
-            await res.json();
-
-
-        alert(
-            data.message
-        );
-
-
-        if(data.success){
-
-            socket.emit(
-                "setPlayerData",
-                {
-
-                    userId:
-                        currentUser.id,
-
-                    nickname:
-                        currentUser.nickname
-
-                }
-            );
-
-        }
-
-
-        await updateClanUI();
-
-
-    }catch(err){
-
-        console.error(err);
-
-    }
-
-}
-
-
-// ============================================================
-// DELETE CLAN
-// ============================================================
-
-async function deleteClan(){
-
-    if(
-        !confirm(
-            "Удалить клан?"
-        )
-    ){
-
-        return;
-    }
-
-
-    const token =
-        localStorage.getItem(
-            "token"
-        );
-
-
-    try{
-
-        const res =
-            await fetch(
-                "/clan/delete",
-                {
-
-                    method:"DELETE",
-
-                    headers:{
-
-                        "Authorization":
-                            token
-
-                    }
-
-                }
-            );
-
-
-        const data =
-            await res.json();
-
-
-        alert(
-            data.message
-        );
-
-
-        if(data.success){
-
-            inClan = false;
-
-            clanOwner = false;
-
-
-            const requests =
-                document.getElementById(
-                    "clanRequests"
-                );
-
-
-            if(requests){
-
-                requests.innerHTML =
-                    "";
-
-            }
-
-
-            const clanText =
-                document.getElementById(
-                    "clantext"
-                );
-
-
-            if(clanText){
-
-                clanText.style.display =
-                    "block";
-
-            }
-
-
-            socket.emit(
-                "setPlayerData",
-                {
-
-                    userId:
-                        currentUser.id,
-
-                    nickname:
-                        currentUser.nickname
-
-                }
-            );
-
-
-            await updateClanUI();
-
-            await loadClans();
-
-        }
-
-
-    }catch(err){
-
-        console.error(err);
-
-    }
-
-}
-
-
-// ============================================================
-// CLAN REQUESTS
-// ============================================================
-
-async function loadClanRequests(){
-
-    const box =
-        document.getElementById(
-            "clanRequests"
-        );
-
-
-    if(!box) return;
-
-
-    if(!clanOwner){
-
-        box.innerHTML =
-            "";
-
-        return;
-    }
-
-
-    const token =
-        localStorage.getItem(
-            "token"
-        );
-
-
-    try{
-
-        const res =
-            await fetch(
-                "/clan/requests",
-                {
-
-                    headers:{
-
-                        "Authorization":
-                            token
-
-                    }
-
-                }
-            );
-
-
-        const requests =
-            await res.json();
-
-
-        box.innerHTML =
-            "";
-
-
-        requests.forEach(r => {
-
-            box.innerHTML += `
-
-                <div>
-
-                    ${r.nickname}
-
-                    <button
-                        onclick="
-                            acceptClan(
-                                ${r.id}
-                            )
-                        "
-                    >
-                        ✅ Принять
-                    </button>
-
-                    <button
-                        onclick="
-                            rejectClan(
-                                ${r.id}
-                            )
-                        "
-                    >
-                        ❌ Отклонить
-                    </button>
-
-                </div>
-
-            `;
-
-        });
-
-
-    }catch(err){
-
-        console.error(
-            "REQUEST ERROR:",
-            err
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// ACCEPT CLAN REQUEST
-// ============================================================
 
 async function acceptClan(id){
 
-    try{
+    await fetch("/clan/request/accept",{
 
-        const res =
-            await fetch(
-                "/clan/request/accept",
-                {
+        method:"POST",
+        
+        headers:{
+            "Content-Type":"application/json",
+            Authorization:localStorage.getItem("token")
+        },
 
-                    method:"POST",
+        body:JSON.stringify({
+            id
+        })
 
-                    headers:{
+    });
 
-                        "Content-Type":
-                            "application/json",
+    const data = await res.json();
 
-                        "Authorization":
-                            localStorage.getItem(
-                                "token"
-                            )
-
-                    },
-
-                    body:JSON.stringify({
-                        id
-                    })
-
-                }
-            );
-
-
-        const data =
-            await res.json();
-
-
-        if(data.success){
-
-            socket.emit(
-                "setPlayerData",
-                {
-
-                    userId:
-                        currentUser.id,
-
-                    nickname:
-                        currentUser.nickname
-
-                }
-            );
-
-        }
-
-
-        alert(
-            data.message ||
-            "Готово"
-        );
-
-
-        await loadClanRequests();
-
-        await updateClanUI();
-
-        await loadClans();
-
-
-    }catch(err){
-
-        console.error(err);
-
-        alert(
-            "Ошибка принятия заявки"
-        );
-
+    if (data.success) {
+        socket.emit("setPlayerData", {
+            userId: currentUser.id,
+            nickname: currentUser.nickname
+        });
     }
 
-}
+    loadClanRequests();
+    updateClanUI();
+    loadClans();
 
-
-// ============================================================
-// REJECT CLAN REQUEST
-// ============================================================
-
+    }
 async function rejectClan(id){
 
-    try{
+    await fetch("/clan/request/reject",{
 
-        const res =
-            await fetch(
-                "/clan/request/reject",
-                {
+        method:"POST",
 
-                    method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            Authorization:localStorage.getItem("token")
+        },
 
-                    headers:{
+        body:JSON.stringify({
+            id
+        })
 
-                        "Content-Type":
-                            "application/json",
-
-                        "Authorization":
-                            localStorage.getItem(
-                                "token"
-                            )
-
-                    },
-
-                    body:JSON.stringify({
-                        id
-                    })
-
-                }
-            );
+    });
 
 
-        const data =
-            await res.json();
-
-
-        if(!data.success){
-
-            alert(
-                data.message ||
-                "Ошибка"
-            );
-
-        }
-
-
-        await loadClanRequests();
-
-
-    }catch(err){
-
-        console.error(err);
-
-    }
+    loadClanRequests();
 
 }
-
-
-// ============================================================
-// UPDATE CLAN UI
-// ============================================================
 
 async function updateClanUI(){
 
-    const token =
-        localStorage.getItem(
-            "token"
-        );
+    const token = localStorage.getItem("token");
+
+    if(!token) return;
 
 
-    if(!token){
-
-        return;
-    }
-
-
-    try{
-
-        const res =
-            await fetch(
-                "/clan/me",
-                {
-
-                    headers:{
-
-                        "Authorization":
-                            token
-
-                    }
-
-                }
-            );
-
-
-        const data =
-            await res.json();
-
-
-        const btn =
-            document.querySelector(
-                "#clanSidebar button"
-            );
-
-
-        const requests =
-            document.getElementById(
-                "clanRequests"
-            );
-
-
-        if(!btn){
-
-            return;
+    const res = await fetch("/clan/me",{
+        headers:{
+            Authorization:token
         }
+    });
 
 
-        if(!data.inClan){
-
-            inClan = false;
-
-            clanOwner = false;
+    const data = await res.json();
 
 
-            if(requests){
-
-                requests.innerHTML =
-                    "";
-
-            }
+    const btn = document.querySelector("#clanSidebar button");
 
 
-            btn.textContent =
-                "➕ Создать клан";
+    if(!data.inClan){
+
+        inClan = false;
+        clanOwner = false;
+
+        document.getElementById("clanRequests").innerHTML = "";
+
+        btn.textContent = "➕ Создать клан";
+        btn.onclick = openCreateClan;
+
+    }else{
+
+        inClan = true;
 
 
-            btn.onclick =
-                openCreateClan;
+        if(data.owner){
+
+            clanOwner = true;
+
+            btn.textContent = "🗑 Удалить клан";
+            btn.onclick = deleteClan;
+
+
+            // вот здесь появляются заявки
+            loadClanRequests();
 
 
         }else{
 
-            inClan = true;
+            clanOwner = false;
 
+            document.getElementById("clanRequests").innerHTML = "";
 
-            if(data.owner){
-
-                clanOwner = true;
-
-
-                btn.textContent =
-                    "🗑 Удалить клан";
-
-
-                btn.onclick =
-                    deleteClan;
-
-
-                loadClanRequests();
-
-
-            }else{
-
-                clanOwner = false;
-
-
-                if(requests){
-
-                    requests.innerHTML =
-                        "";
-
-                }
-
-
-                btn.textContent =
-                    "Покинуть клан";
-
-
-                btn.onclick =
-                    leaveClan;
-
-            }
+            btn.textContent = "Покинуть клан";
+            btn.onclick = leaveClan;
 
         }
 
-
-        loadClans();
-
-
-    }catch(err){
-
-        console.error(
-            "CLAN UI ERROR:",
-            err
-        );
-
     }
+
+
+    loadClans();
 
 }
 
@@ -3136,11 +2290,9 @@ function updatePlayerTitle(){
 
 function updateMenuTitle(){
 
-    const stats2 = document.getElementById("stats2");
+    document.getElementById("stats2").textContent =
+        playerTitle;
 
-    if(stats2){
-        stats2.textContent = playerTitle;
-    }
 
     const box = document.getElementById("menuTitleImage");
 
@@ -3148,44 +2300,50 @@ function updateMenuTitle(){
 
     box.innerHTML = "";
 
+
     const imgs = titleImages[playerTitle];
 
     if(!imgs) return;
 
+
     imgs.forEach(img => {
 
-        const addImage = () => {
+        if(img.complete){
 
-            const clone = img.cloneNode(true);
+            const clone = img.cloneNode();
 
             clone.width = 50;
             clone.height = 50;
 
             box.appendChild(clone);
-        };
 
-        if(img.complete){
-            addImage();
-        }else{
-            img.addEventListener("load", addImage, {
-                once: true
-            });
+        } else {
+
+            img.onload = () => {
+
+                const clone = img.cloneNode();
+
+                clone.width = 50;
+                clone.height = 50;
+
+                box.appendChild(clone);
+
+            };
+
         }
 
     });
 
 }
 
-
 function drawTitle(p){
-
-    if(!p || !p.playerTitle) return;
 
     const imgs = titleImages[p.playerTitle];
 
     if(!imgs) return;
 
-    const size = 25;
+
+    let size = 25;
 
     imgs.forEach((img,i)=>{
 
@@ -3205,429 +2363,234 @@ function drawTitle(p){
 
 }
 
-
 function playerDeath(killerId){
-
-    if(!killerId) return;
 
     socket.emit("playerDeath", killerId);
 
 }
 
-
 function toggleMusicLibrary(){
-
     const lib = document.getElementById("musicLibrary");
-
-    if(!lib) return;
-
-    lib.style.display =
-        lib.style.display === "none"
-            ? "block"
-            : "none";
-
+    lib.style.display = lib.style.display === "none" ? "block" : "none";
 }
-
 
 function playTrack(i){
-
-    if(!tracks || !tracks[i]) return;
-
     stopMusic();
-
     currentTrack = tracks[i];
-
-    currentTrack.play().catch(err => {
-        console.log("MUSIC ERROR:", err);
-    });
-
+    currentTrack.play();
 }
-
 
 function stopMusic(){
-
-    if(!tracks) return;
-
-    tracks.forEach(t => {
-
-        try{
-            t.pause();
-            t.currentTime = 0;
-        }catch(e){}
-
-    });
-
+    tracks.forEach(t => t.pause());
     currentTrack = null;
-
 }
 
-
 function addLevel(){
-
     level++;
-
-    const levelElement =
-        document.getElementById("level");
-
-    if(levelElement){
-        levelElement.textContent = level;
-    }
+    document.getElementById("level").textContent = level;
 
     points += 50;
-
-    const pointsElement =
-        document.getElementById("points");
-
-    if(pointsElement){
-        pointsElement.textContent = points;
-    }
+    document.getElementById("points").textContent = points;
 
     if(level % 5 === 0){
         spawnRandomEnemy();
     }
 
     saveGame();
-
     updatePlayerTitle();
     updateEnemyCount();
 
-    const audio = new Audio(
-        "https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/1029200_Bitsplosion.mp3"
-    );
+
+    const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/1029200_Bitsplosion.mp3");
+
+    audio.play().catch(err => console.log(err));
+
+    const startTime = 119.1;
+    const endTime = 119.8;
 
     audio.addEventListener("loadedmetadata", () => {
-
-        audio.currentTime = 119.1;
-
-        audio.play().catch(err => {
-            console.log("LEVEL SOUND ERROR:", err);
-        });
-
+      audio.currentTime = startTime;
+      audio.play();
     });
 
     audio.addEventListener("timeupdate", () => {
-
-        if(audio.currentTime >= 119.8){
-
-            audio.pause();
-            audio.currentTime = 0;
-
-        }
-
+      if (audio.currentTime >= endTime) {
+        audio.pause();
+        audio.currentTime = startTime;
+      }
     });
-
 }
 
-
 function spawnRandomEnemy(){
+    const x = (Math.random() * 2900) + 1500;
 
-    const x =
-        (Math.random() * 2900) + 1500;
-
-    const type =
-        Math.floor(Math.random() * 3);
+    const type = Math.floor(Math.random() * 3);
 
     let e;
 
     if(type === 0){
-
-        e = makeEnemy(
-            x,
-            2 + Math.random(),
-            100
-        );
-
+        e = makeEnemy(x, 2 + Math.random(), 100);
     }
     else if(type === 1){
-
-        e = makeJumpEnemy(
-            x,
-            1.5 + Math.random(),
-            90
-        );
-
+        e = makeJumpEnemy(x, 1.5 + Math.random(), 90);
     }
     else{
-
         e = makeFastEnemy(x);
-
     }
 
     enemies.push(e);
-
 }
-
 
 function updateShopPrices(){
+    document.getElementById("speedBtn").textContent =
+        `+ Speed (${speedPrice})`;
 
-    const speedBtn =
-        document.getElementById("speedBtn");
+    document.getElementById("powerBtn").textContent =
+        `+ Power (${powerPrice})`;
 
-    const powerBtn =
-        document.getElementById("powerBtn");
+    document.getElementById("attackSpeedBtn").textContent =
+        `+ Attack Speed (${attackSpeedPrice})`;
 
-    const attackSpeedBtn =
-        document.getElementById("attackSpeedBtn");
+    document.getElementById("attackRangeBtn").textContent =
+        `+ Range (${attackRangePrice})`;
 
-    const attackRangeBtn =
-        document.getElementById("attackRangeBtn");
-
-    const nerfBtn =
-        document.getElementById("nerfBtn");
-
-
-    if(speedBtn){
-        speedBtn.textContent =
-            `+ Speed (${speedPrice})`;
-    }
-
-    if(powerBtn){
-        powerBtn.textContent =
-            `+ Power (${powerPrice})`;
-    }
-
-    if(attackSpeedBtn){
-        attackSpeedBtn.textContent =
-            `+ Attack Speed (${attackSpeedPrice})`;
-    }
-
-    if(attackRangeBtn){
-        attackRangeBtn.textContent =
-            `+ Range (${attackRangePrice})`;
-    }
-
-    if(nerfBtn){
-        nerfBtn.textContent =
-            `- Enemy Power (${nerfPrice})`;
-    }
-
+    document.getElementById("nerfBtn").textContent =
+        `- Enemy Power (${nerfPrice})`;
 }
-
 
 function buySpeed(){
+    if(coins >= speedPrice){
+        coins -= speedPrice;
+        player.speed += 1;
 
-    if(coins < speedPrice) return;
+        speedPrice = Math.floor(speedPrice + 10);
 
-    coins -= speedPrice;
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+        points += 10;
+        updatePlayerTitle();
 
-    player.speed += 1;
-
-    speedPrice =
-        Math.floor(speedPrice + 10);
-
-    const coinsElement =
-        document.getElementById("coins");
-
-    if(coinsElement){
-        coinsElement.textContent = coins;
+        saveGame();
     }
-
-    updateShopPrices();
-
-    addLevel();
-
-    points += 10;
-
-    updatePlayerTitle();
-
-    saveGame();
-
 }
-
 
 function buyPower(){
+    if(coins >= powerPrice){
+        coins -= powerPrice;
+        playerPower = Math.min(200, playerPower + 5);
 
-    if(coins < powerPrice) return;
+        powerPrice = Math.floor(powerPrice + 10);
 
-    coins -= powerPrice;
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+        points += 10;
+        updatePlayerTitle();
 
-    playerPower =
-        Math.min(200, playerPower + 5);
-
-    powerPrice =
-        Math.floor(powerPrice + 10);
-
-    const coinsElement =
-        document.getElementById("coins");
-
-    if(coinsElement){
-        coinsElement.textContent = coins;
+        saveGame();
     }
-
-    updateShopPrices();
-
-    addLevel();
-
-    points += 10;
-
-    updatePlayerTitle();
-
-    saveGame();
-
 }
-
 
 function buyAttackSpeed(){
+    if(coins >= attackSpeedPrice){
+        coins -= attackSpeedPrice;
 
-    if(coins < attackSpeedPrice) return;
+        attackCooldown = Math.max(100, attackCooldown - 50);
 
-    coins -= attackSpeedPrice;
+        attackSpeedPrice = Math.floor(attackSpeedPrice + 10);
 
-    attackCooldown =
-        Math.max(100, attackCooldown - 50);
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+        points += 10;
+        updatePlayerTitle();
 
-    attackSpeedPrice =
-        Math.floor(attackSpeedPrice + 10);
-
-    const coinsElement =
-        document.getElementById("coins");
-
-    if(coinsElement){
-        coinsElement.textContent = coins;
+        saveGame();
     }
-
-    updateShopPrices();
-
-    addLevel();
-
-    points += 10;
-
-    updatePlayerTitle();
-
-    saveGame();
-
 }
-
 
 function buyAttackRange(){
+    if(coins >= attackRangePrice){
+        coins -= attackRangePrice;
 
-    if(coins < attackRangePrice) return;
+        attackRange += 5;
 
-    coins -= attackRangePrice;
+        attackRangePrice = Math.floor(attackRangePrice + 10);
 
-    attackRange += 5;
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+        points += 10;
+        updatePlayerTitle();
 
-    attackRangePrice =
-        Math.floor(attackRangePrice + 10);
-
-    const coinsElement =
-        document.getElementById("coins");
-
-    if(coinsElement){
-        coinsElement.textContent = coins;
+        saveGame();
     }
-
-    updateShopPrices();
-
-    addLevel();
-
-    points += 10;
-
-    updatePlayerTitle();
-
-    saveGame();
-
 }
 
-
 function nerfEnemies(){
+    if(coins >= nerfPrice){
+        coins -= nerfPrice;
 
-    if(coins < nerfPrice) return;
+        enemyPowerNerf = Math.max(0.3, enemyPowerNerf - 0.2);
 
-    coins -= nerfPrice;
+        nerfPrice = Math.floor(nerfPrice + 10);
 
-    enemyPowerNerf =
-        Math.max(
-            0.3,
-            enemyPowerNerf - 0.2
-        );
+        document.getElementById("coins").textContent = coins;
+        updateShopPrices();
+        addLevel();
+        points += 10;
+        updatePlayerTitle();
 
-    nerfPrice =
-        Math.floor(nerfPrice + 10);
-
-    const coinsElement =
-        document.getElementById("coins");
-
-    if(coinsElement){
-        coinsElement.textContent = coins;
+        saveGame();
     }
-
-    updateShopPrices();
-
-    addLevel();
-
-    points += 10;
-
-    updatePlayerTitle();
-
-    saveGame();
-
 }
 
 
 function buyImmortal(){
 
-    if(coins < immortalPrice) return;
+    if(coins >= immortalPrice){
 
-    coins -= immortalPrice;
+        coins -= immortalPrice;
 
-    immortal = true;
+        immortal = true;
+        immortalTimer = 600; // 10 секунд при 60 FPS
 
-    immortalTimer = 600;
+        document.getElementById("coins").textContent = coins;
 
-    const coinsElement =
-        document.getElementById("coins");
-
-    if(coinsElement){
-        coinsElement.textContent = coins;
+        saveGame();
     }
-
-    saveGame();
 
 }
 
 
 function buyDoubleJump(){
 
-    if(coins < doubleJumpPrice) return;
+    if(coins >= doubleJumpPrice){
 
-    coins -= doubleJumpPrice;
+        coins -= doubleJumpPrice;
 
-    doubleJump = true;
+        doubleJump = true;
 
-    doubleJumpCount++;
+        doubleJumpCount++;
 
-    const coinsElement =
-        document.getElementById("coins");
+        document.getElementById("coins").textContent = coins;
 
-    if(coinsElement){
-        coinsElement.textContent = coins;
+        saveGame();
     }
-
-    saveGame();
-
 }
-
 
 function toggleMapMenu(){
-
-    const m =
-        document.getElementById("mapMenu");
-
-    if(!m) return;
-
-    m.style.display =
-        m.style.display === "none"
-            ? "block"
-            : "none";
-
+    const m = document.getElementById("mapMenu");
+    m.style.display = m.style.display === "none" ? "block" : "none";
 }
-
 
 function switchMap(i){
 
+    // переключаем карту
     currentMap = i;
 
+    // телепорт игрока на стартовую позицию
     player.x = 3000;
     player.y = 100;
 
@@ -3637,7 +2600,7 @@ function switchMap(i){
     player.knockX = 0;
     player.knockY = 0;
 
-
+    // возвращаем всех ботов на их стартовые позиции
     for(const e of enemies){
 
         e.x = e.startX;
@@ -3655,128 +2618,100 @@ function switchMap(i){
         e.invulnerable = false;
         e.invulnerableTimer = 0;
 
+        // если бот-прыгун
         if(e.type === "jumper"){
-
             e.grounded = false;
             e.jumpTimer = 0;
-
         }
 
+        // сбрасываем таймер нахождения рядом с игроком
         e.stayNearTimer = 0;
-
     }
-
 }
-
 
 function getEnemyCount(){
-
     return Math.floor((level - 1) / 5) + 1;
-
 }
-
 
 function updateEnemyCount(){
 
-    const targetCount =
-        getEnemyCount();
+    const targetCount = getEnemyCount();
 
-
+    // Если ботов меньше нужного количества — добавляем
     while(enemies.length < targetCount){
 
-        const x =
-            (Math.random() * 2900) + 1500;
+        const x = (Math.random() * 2900) + 1500;
 
-        const type =
-            Math.floor(Math.random() * 3);
+        const type = Math.floor(Math.random() * 3);
 
         let e;
 
         if(type === 0){
-
             e = makeEnemy(
                 x,
                 2 + Math.random(),
                 100
             );
-
         }
         else if(type === 1){
-
             e = makeJumpEnemy(
                 x,
                 1.5 + Math.random(),
                 90
             );
-
         }
         else{
-
             e = makeFastEnemy(
                 x,
                 5 + Math.random(),
                 30
             );
-
         }
 
         enemies.push(e);
-
     }
 
-
+    // Если ботов стало больше нужного количества — удаляем лишних
     while(enemies.length > targetCount){
-
         enemies.pop();
-
     }
-
 }
 
 
 function backToMenu(){
 
+    // остановить игру
     gameStarted = false;
 
-    const menu =
-        document.getElementById("startMenu");
+    // показать меню
+    document.getElementById("startMenu").style.display = "flex";
 
-    if(menu){
-        menu.style.display = "flex";
-    }
-
+    // (опционально) остановить музыку
     stopMusic();
 
     updateMenuTitle();
 
+    // (опционально) сброс камеры
     camX = 0;
 
+    // (опционально) отключить управление
     keys["KeyA"] = false;
     keys["KeyD"] = false;
     keys["Space"] = false;
-
 }
 
-
 async function saveGame(){
-
-    const token =
-        localStorage.getItem("token");
-
-    if(!token) return;
-
-    try{
+    try {
+        const token = localStorage.getItem("token");
+        if(!token) return;
 
         await fetch("/save", {
-
-            method:"POST",
-
-            headers:{
-                "Content-Type":"application/json",
-                "Authorization":token
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
             },
-
-            body:JSON.stringify({
+            body: JSON.stringify({
 
                 coins,
                 points,
@@ -3796,458 +2731,237 @@ async function saveGame(){
                 powerPrice,
                 attackSpeedPrice,
                 attackRangePrice,
-                nerfPrice,
-
-                invincible,
-                invincibleTimer,
-
-                freezeHit,
-
-                shield,
-                shieldTimer
+                nerfPrice
 
             })
-
         });
 
+    } catch (err) {
+        console.log("SAVE ERROR:", err);
     }
-    catch(err){
-
-        console.log(
-            "SAVE ERROR:",
-            err
-        );
-
-    }
-
 }
 
-
 async function loadGame(){
+    const token = localStorage.getItem("token");
+    if(!token) return;
 
-    const token =
-        localStorage.getItem("token");
+    try {
+        const res = await fetch("/load", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            }
+        });
 
-    if(!token) return false;
+        const data = await res.json();
 
-    try{
-
-        const res =
-            await fetch("/load", {
-
-                method:"POST",
-
-                headers:{
-                    "Content-Type":"application/json",
-                    "Authorization":token
-                }
-
-            });
-
-
-        if(!res.ok){
-
-            console.log(
-                "LOAD HTTP ERROR:",
-                res.status
-            );
-
-            return false;
-
+        if (data.error) {
+            console.log(data.error);
+            return;
         }
 
+        coins = data.coins;
+        points = data.points;
+        level = data.level;
+        playerColor = data.playerColor;
+        player.speed = data.playerSpeed;
+        playerPower = data.playerPower;
+        attackCooldown = data.attackCooldown;
+        attackRange = data.attackRange;
+        enemyPowerNerf = data.enemyPowerNerf;
 
-        const data =
-            await res.json();
+        speedPrice = data.speedPrice;
+        powerPrice = data.powerPrice;
+        attackSpeedPrice = data.attackSpeedPrice;
+        attackRangePrice = data.attackRangePrice;
+        nerfPrice = data.nerfPrice;
 
+        invincible = data.invincible;
+        invincibleTimer = data.invincibleTimer;
 
-        if(data.error){
+        freezeHit = data.freezeHit;
 
-            console.log(
-                "LOAD SERVER ERROR:",
-                data.error
-            );
+        shield = data.shield;
+        shieldTimer = data.shieldTimer;
 
-            return false;
-
-        }
-
-
-        coins =
-            Number(data.coins ?? 0);
-
-        points =
-            Number(data.points ?? 0);
-
-        level =
-            Number(data.level ?? 1);
-
-        playerColor =
-            data.playerColor || "#ff0000";
-
-
-        if(player){
-
-            player.speed =
-                Number(data.playerSpeed ?? 6);
-
-        }
-
-
-        playerPower =
-            Number(data.playerPower ?? 100);
-
-        attackCooldown =
-            Number(data.attackCooldown ?? 800);
-
-        attackRange =
-            Number(data.attackRange ?? 50);
-
-        enemyPowerNerf =
-            Number(data.enemyPowerNerf ?? 1);
-
-
-        speedPrice =
-            Number(data.speedPrice ?? 100);
-
-        powerPrice =
-            Number(data.powerPrice ?? 200);
-
-        attackSpeedPrice =
-            Number(data.attackSpeedPrice ?? 250);
-
-        attackRangePrice =
-            Number(data.attackRangePrice ?? 250);
-
-        nerfPrice =
-            Number(data.nerfPrice ?? 300);
-
-
-        immortal =
-            Boolean(data.invincible);
-
-        immortalTimer =
-            Number(data.invincibleTimer ?? 0);
-
-        freezeHit =
-            Boolean(data.freezeHit);
-
-        shield =
-            Boolean(data.shield);
-
-        shieldTimer =
-            Number(data.shieldTimer ?? 0);
-
-
-        const coinsElement =
-            document.getElementById("coins");
-
-        const pointsElement =
-            document.getElementById("points");
-
-        const levelElement =
-            document.getElementById("level");
-
-        const colorPicker =
-            document.getElementById("playerColorPicker");
-
-
-        if(coinsElement){
-            coinsElement.textContent = coins;
-        }
-
-        if(pointsElement){
-            pointsElement.textContent = points;
-        }
-
-        if(levelElement){
-            levelElement.textContent = level;
-        }
-
-        if(colorPicker){
-            colorPicker.value = playerColor;
-        }
-
+        document.getElementById("coins").textContent = coins;
+        document.getElementById("points").textContent = points;
+        document.getElementById("level").textContent = level;
+        document.getElementById("playerColorPicker").value = playerColor;
 
         updateShopPrices();
         updatePlayerTitle();
         updateMenuTitle();
-        updateEnemyCount();
 
-        return true;
-
+    } catch(err){
+        console.log("LOAD ERROR:", err);
     }
-    catch(err){
-
-        console.log(
-            "LOAD ERROR:",
-            err
-        );
-
-        return false;
-
-    }
-
 }
 
-
 // ================= UPDATE =================
-
 function update(delta){
-
     if(!gameStarted) return;
 
     if(pvpHitCooldown > 0){
         pvpHitCooldown -= delta;
     }
 
+    if(!gameStarted) return;
 
-    // ================= PLAYER =================
-
+    // ===== PLAYER =====
     player.vx = 0;
 
-
-    if(
-        keys["KeyA"] ||
-        keys["ArrowLeft"]
-    ){
-
+    if(keys["KeyA"] || keys["ArrowLeft"]){
         player.vx = -player.speed;
         player.dir = -1;
-
     }
 
-
-    if(
-        keys["KeyD"] ||
-        keys["ArrowRight"]
-    ){
-
+    if(keys["KeyD"] || keys["ArrowRight"]){
         player.vx = player.speed;
         player.dir = 1;
-
     }
 
-
-    if(
-        keys["KeyW"] ||
-        keys["ArrowUp"] ||
-        keys["Space"]
-    ){
-
+    if(keys["KeyW"] || keys["ArrowUp"] || keys["Space"]){
+    
         if(player.grounded){
-
+        
             player.vy = -player.jump;
-
+        
         }
-
+    
     }
 
-
-    if(
-        keys["KeyH"] &&
-        !player.attacking
-    ){
-
+    if(keys["KeyH"] && !player.attacking){
         attack();
-
     }
-
 
     player.vy += gravity * delta;
 
     move(player, delta);
 
-
-    if(player.attackTime > 0){
-
-        player.attackTime -= delta;
-
-    }
-    else{
-
-        player.attacking = false;
-
-    }
-
-
-    // ================= IMMORTAL =================
+    if(player.attackTime > 0) player.attackTime -= delta;
+    else player.attacking = false;
 
     if(immortal){
 
         immortalTimer -= delta;
 
         if(immortalTimer <= 0){
-
             immortal = false;
             immortalTimer = 0;
-
         }
 
     }
 
-
-    // ================= PVP =================
-
-    if(
-        currentMap === 3 &&
-        player.attacking &&
-        pvpHitCooldown <= 0
-    ){
+    if (currentMap === 3 && player.attacking && pvpHitCooldown <= 0) {
 
         const hitbox = {
+            x: player.dir === 1
+                ? player.x + player.w
+                : player.x - attackRange,
 
-            x:
-                player.dir === 1
-                    ? player.x + player.w
-                    : player.x - attackRange,
-
-            y:player.y,
-
-            w:attackRange,
-            h:player.h
-
+            y: player.y,
+            w: attackRange,
+            h: player.h
         };
 
 
-        for(const id in otherPlayers){
+        for (const id in otherPlayers) {
 
             if(id === socket.id) continue;
 
-            const p =
-                otherPlayers[id];
+            const p = otherPlayers[id];
 
             if(p.map !== 3) continue;
 
 
             const target = {
-
                 x:p.x,
                 y:p.y,
-
                 w:40,
                 h:40
-
             };
 
 
             if(hit(hitbox,target)){
 
-                socket.emit(
-                    "pvpHit",
-                    id
-                );
+                socket.emit("pvpHit", id);
 
+                // защита от повторных ударов
                 pvpHitCooldown = 300;
 
                 player.attackTime = 0;
                 player.attacking = false;
 
                 break;
-
             }
 
         }
-
     }
 
-
-    // ================= ENEMIES =================
-
+    // ===== ENEMIES =====
     if(currentMap < 3){
+        const mainPlatform = mapPlatforms[currentMap][0];
 
         for(const e of enemies){
 
             if(e.invulnerable){
-
                 e.invulnerableTimer -= delta;
 
                 if(e.invulnerableTimer <= 0){
-
                     e.invulnerable = false;
-
                 }
-
             }
 
-
+            // AI движение
             const onMainPlatform =
                 player.x >= 1500 &&
                 player.x <= 4460 &&
                 player.y + player.h <= 650;
 
-
             if(onMainPlatform){
-
                 if(player.x < e.x){
-
                     e.vx = -e.speed;
                     e.dir = -1;
-
-                }
-                else{
-
+                } else {
                     e.vx = e.speed;
                     e.dir = 1;
-
                 }
-
-            }
-            else{
-
-                e.vx = 0;
-
+            } else {
+                e.vx = 0; // ждать на платформе
             }
 
-
+            // гравитация
             e.vy += gravity * delta;
 
             move(e, delta);
 
-
-            // ===== FALL =====
-
-            if(
-                e.y >
-                window.innerHeight + 300
-            ){
+            // ===== падение за карту =====
+            if (e.y > window.innerHeight + 300) {
 
                 if(e.type === "jumper"){
-
                     coins += 1;
                     points += 5;
-
+                    updatePlayerTitle();
+                    saveGame();
                 }
                 else if(e.type === "fast"){
-
                     coins += 5;
                     points += 25;
-
+                    updatePlayerTitle();
+                    saveGame();
                 }
                 else{
-
                     coins += 2;
                     points += 10;
-
+                    updatePlayerTitle();
+                    saveGame();
                 }
 
-
-                updatePlayerTitle();
-
-                const coinsElement =
-                    document.getElementById("coins");
-
-                const pointsElement =
-                    document.getElementById("points");
-
-                if(coinsElement){
-                    coinsElement.textContent = coins;
-                }
-
-                if(pointsElement){
-                    pointsElement.textContent = points;
-                }
-
+                document.getElementById("coins").textContent = coins;
+                document.getElementById("points").textContent = points;
+                saveGame();
 
                 e.x = e.startX;
                 e.y = e.startY;
@@ -4260,318 +2974,148 @@ function update(delta){
 
                 e.invulnerable = true;
                 e.invulnerableTimer = 180;
-
-                saveGame();
-
             }
 
-
-            // ===== ENEMY ATTACK =====
-
+            // ===== атака =====
             if(e.attackTime > 0){
-
                 e.attackTime -= delta;
-
-            }
-            else{
-
+            } else {
                 e.attacking = false;
-
             }
 
-
-            if(hit(e,player)){
-
+            if(hit(e, player)){
+            
                 if(immortal){
+                    // бессмертие: бот не наносит урон и не отталкивает
                     continue;
                 }
-
+            
                 enemyAttack(e);
-
+            
                 if(e.attacking){
-
-                    player.knockX =
-                        e.dir *
-                        e.power *
-                        enemyPowerNerf;
-
-                    player.knockY =
-                        -e.power *
-                        0.4 *
-                        enemyPowerNerf;
-
+                
+                    player.knockX = e.dir * e.power * enemyPowerNerf;
+                    player.knockY = -e.power * 0.4 * enemyPowerNerf;
+                
                     lastAttackerId = e.id;
-
                 }
-
             }
 
-
-            // ===== JUMPER =====
-
+            // ===== прыгуны =====
             if(e.type === "jumper"){
-
                 if(e.jumpTimer <= 0){
-
-                    e.vy =
-                        -15 -
-                        Math.random() * 5;
-
-                    e.jumpTimer =
-                        70 +
-                        Math.random() * 10;
-
-                }
-                else{
-
+                    e.vy = -15 - Math.random() * 5;
+                    e.jumpTimer = 70 + Math.random() * 10;
+                } else {
                     e.jumpTimer -= delta;
-
                 }
-
             }
 
-
-            // ===== PLAYER ATTACK =====
-
+            // ===== удар игрока =====
             if(player.attackTime > 0){
 
-                const range =
-                    attackRange;
-
+                const range = attackRange;
 
                 const hitbox = {
-
-                    x:
-                        player.dir === 1
-                            ? player.x + player.w
-                            : player.x - range,
-
-                    y:player.y,
-
-                    w:range,
-                    h:player.h
-
+                    x: player.dir === 1 ? player.x + player.w : player.x - range,
+                    y: player.y,
+                    w: range,
+                    h: player.h
                 };
 
-
-                if(
-                    hit(hitbox,e) &&
-                    !e.invulnerable
-                ){
+                if(hit(hitbox, e) && !e.invulnerable){
 
                     let knockMultiplier = 1;
-
 
                     if(e.type === "fast"){
                         knockMultiplier = 4;
                     }
 
+                    e.knockX = player.dir * playerPower * 1.1 * knockMultiplier;
+                    e.knockY = -playerPower * 0.5 * knockMultiplier;
 
-                    e.knockX =
-                        player.dir *
-                        playerPower *
-                        1.1 *
-                        knockMultiplier;
-
-                    e.knockY =
-                        -playerPower *
-                        0.5 *
-                        knockMultiplier;
-
-
-                    const audio =
-                        new Audio(
-                            "https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/0f9470e818805fc.mp3"
-                        );
-
-                    audio.play().catch(()=>{});
+                    const audio = new Audio("https://raw.githubusercontent.com/ALIM664/FUN/main/funsounds/0f9470e818805fc.mp3");
+                    audio.play()
 
                     player.attackTime = 0;
-
                 }
-
             }
-
-
-            // ===== ENEMY STUCK =====
-
-            if(
-                Math.abs(e.x - player.x) <= 3
-            ){
-
-                e.stayNearTimer +=
-                    delta / 60;
-
-
-                if(
-                    e.stayNearTimer >=
-                    e.stayNearLimit
-                ){
-
+            if (Math.abs(e.x - player.x) <= 3) {
+            
+                e.stayNearTimer += delta / 60;
+            
+                if (e.stayNearTimer >= e.stayNearLimit) {
+                
                     e.vy = -18;
-
+                
                     e.stayNearTimer = 0;
-
-                    e.stayNearLimit =
-                        3 +
-                        Math.random() * 2;
-
+                    e.stayNearLimit = 3 + Math.random() * 2;
                 }
-
-            }
-            else{
-
+            
+            } else {
                 e.stayNearTimer = 0;
-
             }
-
         }
-
     }
 
+    // ===== CAMERA =====
+    camX += (player.x - window.innerWidth / 2 - camX) * 0.1;
 
-    // ================= CAMERA =================
+    // reset player fall
+    if(player.y > window.innerHeight + 300){
 
-    camX +=
-        (
-            player.x -
-            window.innerWidth / 2 -
-            camX
-        ) * 0.1;
-
-
-    // ================= PLAYER FALL =================
-
-    if(
-        player.y >
-        window.innerHeight + 300
-    ){
+        console.log("DEATH SEND", lastAttackerId);
 
         if(lastAttackerId){
-
-            socket.emit(
-                "playerDeath",
-                lastAttackerId
-            );
-
+        
+            socket.emit("playerDeath", lastAttackerId);
+        
             lastAttackerId = null;
-
         }
-
-
+    
         player.x = 3000;
         player.y = 100;
-
     }
 
-
-    // ================= SEND PLAYER =================
-
-    if(gameStarted){
-
-        socket.emit("move",{
-
-            x:player.x,
-            y:player.y,
-
-            nickname:playerNickname,
-
-            color:playerColor,
-
-            map:currentMap,
-
-            playerTitle:playerTitle,
-
-            playerPoint:playerPoint,
-
-            userId:
-                currentUser.loggedIn
-                    ? currentUser.id
-                    : null
-
+    if (gameStarted) {
+        socket.emit("move", {
+            x: player.x,
+            y: player.y,
+            nickname: playerNickname,
+            color: playerColor,
+            map: currentMap,
+            playerTitle: playerTitle
         });
-
     }
 
-
-    const stats =
-        document.getElementById("stats");
-
-
-    if(stats){
-
-        stats.textContent =
-            `speed:${player.speed}` +
-            `___power:${playerPower}` +
-            `___CD:${attackCooldown}ms` +
-            `___EN:${enemies.length}` +
-            `___double jumps:${doubleJumpCount}`;
-
-    }
-
+    document.getElementById("stats").textContent =
+        `speed:${player.speed}___power:${playerPower}___CD:${attackCooldown}ms___EN:${enemies.length}___double jumps:${doubleJumpCount}`;
 }
 
-
 // ================= DRAW =================
-
 function draw(){
-
     if(!gameStarted) return;
 
-
-    ctx.fillStyle =
-        maps[currentMap].bg;
-
-    ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
+    ctx.fillStyle = maps[currentMap].bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
 
+    const zoom = isMobile ? 0.6 : 1;
+    const cameraYOffset = isMobile ? -150 : 0;
 
-    const zoom =
-        isMobile ? 0.6 : 1;
-
-    const cameraYOffset =
-        isMobile ? -150 : 0;
-
-
+    ctx.translate(window.innerWidth / 2, window.innerHeight / 2);
+    ctx.scale(zoom, zoom);
     ctx.translate(
-        window.innerWidth / 2,
-        window.innerHeight / 2
+        -camX - window.innerWidth / 2,
+        -window.innerHeight / 2 + cameraYOffset
     );
 
-
-    ctx.scale(
-        zoom,
-        zoom
-    );
-
-
-    ctx.translate(
-        -camX -
-        window.innerWidth / 2,
-
-        -window.innerHeight / 2 +
-        cameraYOffset
-    );
-
-
-    // ================= PLATFORMS =================
-
+    // ===== платформы =====
     const size = 50;
-
-
-    for(
-        const p of mapPlatforms[currentMap]
-    ){
+    for(const p of mapPlatforms[currentMap]){
 
         if(p.type === "big1"){
-
             ctx.drawImage(
                 big1PlatformImg,
                 p.x,
@@ -4579,11 +3123,8 @@ function draw(){
                 p.w,
                 p.h
             );
-
         }
-
         else if(p.type === "small1"){
-
             ctx.drawImage(
                 small1PlatformImg,
                 p.x,
@@ -4591,17 +3132,11 @@ function draw(){
                 p.w,
                 p.h
             );
-
         }
-
         else if(p.type === "big3"){
-
-            for(
-                let x = p.x;
-                x < p.x + p.w;
-                x += size
-            ){
-
+        
+            for(let x = p.x; x < p.x + p.w; x += size){
+            
                 ctx.drawImage(
                     big3PlatformImg,
                     x,
@@ -4609,25 +3144,18 @@ function draw(){
                     size,
                     size
                 );
-
+            
             }
-
+        
         }
 
         else if(p.type === "small2"){
-
             ctx.save();
 
-            ctx.filter =
-                "brightness(0.2)";
-
-
-            for(
-                let x = p.x;
-                x < p.x + p.w;
-                x += size
-            ){
-
+            ctx.filter = "brightness(0.2)";
+        
+            for(let x = p.x; x < p.x + p.w; x += size){
+            
                 ctx.drawImage(
                     small2PlatformImg,
                     x,
@@ -4635,27 +3163,17 @@ function draw(){
                     size + 1,
                     size / 5 * 2
                 );
-
+            
             }
-
+        
             ctx.restore();
-
         }
-
         else if(p.type === "big2"){
-
             ctx.save();
 
-            ctx.filter =
-                "brightness(0.2)";
+            ctx.filter = "brightness(0.2)";
 
-
-            for(
-                let x = p.x;
-                x < p.x + p.w;
-                x += size
-            ){
-
+            for(let x = p.x; x < p.x + p.w; x += size){
                 ctx.drawImage(
                     big2PlatformImg,
                     x,
@@ -4663,21 +3181,15 @@ function draw(){
                     size + 1,
                     size
                 );
-
             }
-
+        
             ctx.restore();
-
         }
 
         else if(p.type === "small3"){
-
-            for(
-                let x = p.x;
-                x < p.x + p.w;
-                x += size
-            ){
-
+        
+            for(let x = p.x; x < p.x + p.w; x += size){
+            
                 ctx.drawImage(
                     small3PlatformImg,
                     x,
@@ -4685,25 +3197,18 @@ function draw(){
                     size,
                     size / 5 * 2
                 );
-
+            
             }
-
+        
         }
 
         else if(p.type === "small01"){
-
             ctx.save();
 
-            ctx.filter =
-                "brightness(1.5)";
-
-
-            for(
-                let x = p.x;
-                x < p.x + p.w;
-                x += size
-            ){
-
+            ctx.filter = "brightness(1.5)";
+        
+            for(let x = p.x; x < p.x + p.w; x += size){
+            
                 ctx.drawImage(
                     small01PlatformImg,
                     x,
@@ -4711,75 +3216,49 @@ function draw(){
                     size + 1,
                     size / 5 * 2
                 );
-
+            
             }
-
+        
             ctx.restore();
-
         }
 
     }
 
-
-    // ================= PLAYER =================
-
-    ctx.globalAlpha =
-        immortal ? 0.5 : 1;
-
+    // ===== игрок =====
+    if(immortal){
+        ctx.globalAlpha = 0.5; // в 2 раза прозрачнее
+    }
+    else{
+        ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = playerColor;
-
-    ctx.fillRect(
-        player.x,
-        player.y,
-        player.w,
-        player.h
-    );
-
-
-    ctx.strokeStyle = "yellow";
-    ctx.lineWidth = 3;
-
-    ctx.strokeRect(
-        player.x,
-        player.y,
-        player.w,
-        player.h
-    );
-
-
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.strokeStyle = "yellow"; 
+    ctx.lineWidth = 3; 
+    ctx.strokeRect(player.x, player.y, player.w, player.h);
+    ctx.fillStyle = "white";
+    ctx.font = "bold 18px Arial";
+    ctx.textAlign = "center";
     ctx.globalAlpha = 1;
 
-
-    const centerX =
-        player.x +
-        player.w / 2;
+    const centerX = player.x + player.w / 2;
 
 
-    // ================= PLAYER TITLE =================
-
-    const titleImgs =
-        titleImages[playerTitle];
-
+    // картинка звания
+    const titleImgs = titleImages[playerTitle];
 
     if(titleImgs){
 
-        const titleSize = 40;
+        const size = 40;
         const gap = 2;
 
-
         const totalWidth =
-            titleImgs.length *
-            titleSize +
-            (titleImgs.length - 1) *
-            gap;
+            titleImgs.length * size +
+            (titleImgs.length - 1) * gap;
 
+        let startX = centerX - totalWidth / 2;
 
-        let startX =
-            centerX -
-            totalWidth / 2;
-
-
-        titleImgs.forEach(img=>{
+        titleImgs.forEach(img => {
 
             if(img.complete){
 
@@ -4787,29 +3266,21 @@ function draw(){
                     img,
                     startX,
                     player.y - 70,
-                    titleSize,
-                    titleSize
+                    size,
+                    size
                 );
 
             }
 
-            startX +=
-                titleSize + gap;
+            startX += size + gap;
 
         });
 
     }
-
-
-    // ================= NICKNAME =================
+    // ник
 
     ctx.fillStyle = "white";
-
-    ctx.font =
-        "bold 18px Arial";
-
-    ctx.textAlign = "center";
-
+    ctx.font = "bold 18px Arial";
 
     ctx.fillText(
         playerNickname,
@@ -4817,230 +3288,98 @@ function draw(){
         player.y - 10
     );
 
-
-    // ================= ENEMIES =================
+    // ===== враги =====
 
     if(currentMap !== 3){
-
         for(const e of enemies){
-
             if(e.invulnerable){
-
                 ctx.globalAlpha = 0.4;
-
             }
-
 
             if(e.type === "jumper"){
-
-                ctx.fillStyle =
-                    "yellow";
-
+                ctx.fillStyle = "yellow";
             }
             else if(e.type === "fast"){
-
-                ctx.fillStyle =
-                    "purple";
-
+                ctx.fillStyle = "purple";
             }
             else{
-
-                ctx.fillStyle =
-                    "blue";
-
+                ctx.fillStyle = "blue";
             }
 
-
-            ctx.fillRect(
-                e.x,
-                e.y,
-                e.w,
-                e.h
-            );
-
-
+            ctx.fillRect(e.x, e.y, e.w, e.h);
             ctx.globalAlpha = 1;
 
-
+            // эффект атаки врага
             if(e.attacking){
 
-                ctx.strokeStyle =
-                    "black";
-
+                ctx.strokeStyle = "black";
                 ctx.lineWidth = 6;
 
-
-                const y =
-                    e.y + e.h / 2;
-
-
-                const x1 =
-                    e.dir === 1
-                        ? e.x + e.w
-                        : e.x;
-
-
-                const x2 =
-                    e.dir === 1
-                        ? x1 + 60
-                        : x1 - 60;
-
+                const y = e.y + e.h / 2;
+                const x1 = e.dir === 1 ? e.x + e.w : e.x;
+                const x2 = e.dir === 1 ? x1 + 60 : x1 - 60;
 
                 ctx.beginPath();
-
-                ctx.moveTo(
-                    x1,
-                    y
-                );
-
-                ctx.lineTo(
-                    x2,
-                    y
-                );
-
+                ctx.moveTo(x1, y);
+                ctx.lineTo(x2, y);
                 ctx.stroke();
-
             }
-
         }
-
     }
 
-
-    // ================= PLAYER ATTACK =================
-
+    // ===== эффект атаки игрока =====
     if(player.attacking){
 
-        ctx.strokeStyle =
-            "brown";
-
+        ctx.strokeStyle = "brown";
         ctx.lineWidth = 6;
 
-
-        const y =
-            player.y +
-            player.h / 2;
-
-
-        const x1 =
-            player.dir === 1
-                ? player.x + player.w
-                : player.x;
-
-
-        const x2 =
-            player.dir === 1
-                ? x1 + attackRange
-                : x1 - attackRange;
-
+        const y = player.y + player.h / 2;
+        const x1 = player.dir === 1 ? player.x + player.w : player.x;
+        const x2 = player.dir === 1 
+            ? x1 + attackRange 
+            : x1 - attackRange;
 
         ctx.beginPath();
-
-        ctx.moveTo(
-            x1,
-            y
-        );
-
-        ctx.lineTo(
-            x2,
-            y
-        );
-
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
         ctx.stroke();
-
     }
 
+    for (const id in (otherPlayers || {})) {
+        if (id === socket.id) continue;
 
-    // ================= OTHER PLAYERS =================
+        const p = otherPlayers[id];
+        if (p.map !== currentMap) continue;
 
-    for(
-        const id in (otherPlayers || {})
-    ){
+        ctx.globalAlpha = currentMap === 3 ? 1 : 0.3;
 
-        if(id === socket.id)
-            continue;
+        ctx.fillStyle = "white";
+        ctx.font = "bold 18px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(p.nickname, p.x + 20, p.y - 10);
 
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 40, 40);
+        ctx.strokeStyle = "rgba(120, 120, 120, 0.9)"; 
+        ctx.lineWidth = 3; 
+        ctx.strokeRect(p.x, p.y, 40, 40);
 
-        const p =
-            otherPlayers[id];
+        // ===== ЗВАНИЕ ДРУГОГО ИГРОКА =====
 
-
-        if(p.map !== currentMap)
-            continue;
-
-
-        ctx.globalAlpha =
-            currentMap === 3
-                ? 1
-                : 0.3;
-
-
-        ctx.fillStyle =
-            "white";
-
-        ctx.font =
-            "bold 18px Arial";
-
-        ctx.textAlign =
-            "center";
-
-
-        ctx.fillText(
-            p.nickname || "Player",
-            p.x + 20,
-            p.y - 10
-        );
-
-
-        ctx.fillStyle =
-            p.color || "#ff0000";
-
-
-        ctx.fillRect(
-            p.x,
-            p.y,
-            40,
-            40
-        );
-
-
-        ctx.strokeStyle =
-            "rgba(120,120,120,0.9)";
-
-        ctx.lineWidth = 3;
-
-
-        ctx.strokeRect(
-            p.x,
-            p.y,
-            40,
-            40
-        );
-
-
-        // ===== TITLE =====
-
-        const otherTitleImgs =
-            titleImages[p.playerTitle];
-
+        const otherTitleImgs = titleImages[p.playerTitle];
 
         if(otherTitleImgs){
 
-            const titleSize = 40;
+            const size = 40;
             const gap = 2;
 
-
             const totalWidth =
-                otherTitleImgs.length *
-                titleSize +
-                (otherTitleImgs.length - 1) *
-                gap;
+                otherTitleImgs.length * size +
+                (otherTitleImgs.length - 1) * gap;
 
 
             let startX =
-                p.x +
-                20 -
-                totalWidth / 2;
+                p.x + 20 - totalWidth / 2;
 
 
             otherTitleImgs.forEach(img=>{
@@ -5051,14 +3390,13 @@ function draw(){
                         img,
                         startX,
                         p.y - 70,
-                        titleSize,
-                        titleSize
+                        size,
+                        size
                     );
 
                 }
 
-                startX +=
-                    titleSize + gap;
+                startX += size + gap;
 
             });
 
@@ -5066,247 +3404,75 @@ function draw(){
 
     }
 
-
-    ctx.globalAlpha = 1;
-
     ctx.restore();
-
 }
 
+window.addEventListener("load", async () => {
+    restoreLogin();
+    await loadGame();
+});
 
-// ================= LOAD / LOGIN =================
+// ================= LOOP =================
+let lastTime = performance.now();
 
-window.addEventListener(
-    "load",
-    async () => {
-
-        console.log("PAGE LOADED");
-
-        try{
-
-            restoreLogin();
-
-            if(
-                localStorage.getItem("token")
-            ){
-
-                await loadGame();
-
-            }
-
-        }
-        catch(err){
-
-            console.error(
-                "INITIAL LOAD ERROR:",
-                err
-            );
-
-        }
-
-    },
-    { once:true }
-);
-
-// ======================================================
-// ========================= LOOP ========================
-// ======================================================
-
-let lastTime =
-    performance.now();
-
-function loop(time){
-
-    try{
-
-        let delta =
-            (time - lastTime) /
-            16.67;
-
-        lastTime =
-            time;
+function loop(time) {
+    try {
+        let delta = (time - lastTime) / 16.67;
+        lastTime = time;
 
         update(delta);
-
         draw();
-
-    }catch(e){
-
+    } catch (e) {
         alert(e.stack);
-
         console.error(e);
-
         return;
-
     }
 
-    requestAnimationFrame(
-        loop
-    );
-
+    requestAnimationFrame(loop);
 }
 
+window.addEventListener("load", () => {
 
-// ======================================================
-// ================= WINDOW LOAD =========================
-// ======================================================
+    const colorPicker = document.getElementById("playerColorPicker");
 
-window.addEventListener(
-    "load",
-    ()=>{
+    colorPicker.addEventListener("input", () => {
+        playerColor = colorPicker.value;
 
-        const colorPicker =
-            document.getElementById(
-                "playerColorPicker"
-            );
-
-        if(colorPicker){
-
-            colorPicker.addEventListener(
-                "input",
-                ()=>{
-
-                    playerColor =
-                        colorPicker.value;
-
-                    if(
-                        currentUser.loggedIn
-                    ){
-
-                        saveGame();
-
-                    }
-
-                }
-            );
-
+        if (currentUser.loggedIn) {
+            saveGame();
         }
+    });
 
-        const loader =
-            document.getElementById(
-                "loadingScreen"
-            );
+    const loader = document.getElementById("loadingScreen");
 
-        if(loader){
+    requestAnimationFrame(() => {
+        loader.style.opacity = "0";
+        loader.style.transition = "0.5s";
 
-            requestAnimationFrame(
-                ()=>{
+        setTimeout(() => {
+            loader.style.display = "none";
+        }, 500);
+    });
 
-                    loader.style.opacity =
-                        "0";
+    const acc =
+        JSON.parse(localStorage.getItem("account"));
 
-                    loader.style.transition =
-                        "0.5s";
+    if(acc){
 
-                    setTimeout(
-                        ()=>{
+        document.getElementById("nicknameInput").value =
+            acc.nickname;
 
-                            loader.style.display =
-                                "none";
+        document.getElementById("passwordInput").value =
+            acc.password;
 
-                        },
-                        500
-                    );
-
-                }
-            );
-
-        }
-
-        const accountData =
-            localStorage.getItem(
-                "account"
-            );
-
-        if(accountData){
-
-            try{
-
-                const acc =
-                    JSON.parse(
-                        accountData
-                    );
-
-                document.getElementById(
-                    "nicknameInput"
-                ).value =
-                    acc.nickname || "";
-
-                document.getElementById(
-                    "passwordInput"
-                ).value =
-                    acc.password || "";
-
-                playerNickname =
-                    acc.nickname ||
-                    "Player";
-
-            }catch(err){
-
-                console.log(
-                    "ACCOUNT PARSE ERROR:",
-                    err
-                );
-
-            }
-
-        }
-
-        loadGame();
-
-        updatePlayerTitle();
-
-        updateMenuTitle();
-
-        restoreLogin();
-
-        // запускаем чат
-        initChat();
-
+        playerNickname = acc.nickname;
     }
-);
 
-
-// ======================================================
-// ================= CHAT ENTER SHORTCUT =================
-// ======================================================
-
-document.addEventListener(
-    "keydown",
-    (event)=>{
-
-        const input =
-            document.getElementById(
-                "chatInput"
-            );
-
-        if(!input) return;
-
-        if(
-            document.activeElement === input
-        ){
-
-            if(event.key === "Escape"){
-
-                input.blur();
-
-            }
-
-            return;
-
-        }
-
-        // Enter открывает поле чата
-        if(
-            event.key === "Enter" &&
-            gameStarted
-        ){
-
-            event.preventDefault();
-
-            input.focus();
-
-        }
-
-    }
-);
+    loadGame();
+    updatePlayerTitle();
+    updateMenuTitle();
+    restoreLogin();
+});
+</script>
+</body>
+</html>
