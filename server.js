@@ -17,10 +17,10 @@ const SECRET = "super_secret_key_change_this";
 app.use(cors());
 app.use(express.json());
 
-// раздача файлов
+// ================= STATIC =================
+
 app.use(express.static(__dirname));
 
-// главная страница
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "FUN.html"));
 });
@@ -35,16 +35,18 @@ const pool = new Pool({
 });
 
 pool.query("SELECT NOW()", (err, result) => {
-    if(err){
+
+    if (err) {
         console.log("POSTGRES ERROR:", err);
     } else {
         console.log("POSTGRES CONNECTED:", result.rows[0]);
     }
+
 });
 
 // ================= DATABASE INIT =================
 
-async function initDB(){
+async function initDB() {
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS users(
@@ -54,7 +56,6 @@ async function initDB(){
             clan INTEGER
         )
     `);
-
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS saves(
@@ -136,40 +137,51 @@ async function initDB(){
 
 // ================= AUTH =================
 
-function auth(req,res,next){
+function auth(req, res, next) {
 
     const token = req.headers.authorization;
 
     console.log("AUTH TOKEN:", token);
 
-    if(!token){
+    if (!token) {
         return res.status(401).json({
-            error:"No token"
+            error: "No token"
         });
     }
 
     try {
+
         const decoded = jwt.verify(token, SECRET);
+
         req.userId = decoded.id;
+
         next();
+
     } catch (e) {
-        return res.status(401).json({ error: "Invalid token" });
+
+        return res.status(401).json({
+            error: "Invalid token"
+        });
+
     }
+
 }
 
 // ================= REGISTER =================
 
-app.post("/register", async (req,res)=>{
+app.post("/register", async (req, res) => {
 
-    const {nickname,password}=req.body;
+    const { nickname, password } = req.body;
 
-    if(!nickname || !password){
-        return res.json({error:"empty fields"});
+    if (!nickname || !password) {
+        return res.json({
+            error: "empty fields"
+        });
     }
 
-    try{
+    try {
 
-        const hash = await bcrypt.hash(password,10);
+        const hash = await bcrypt.hash(password, 10);
 
         const user = await pool.query(
             `
@@ -177,11 +189,10 @@ app.post("/register", async (req,res)=>{
             VALUES($1,$2)
             RETURNING id
             `,
-            [nickname,hash]
+            [nickname, hash]
         );
 
         const id = user.rows[0].id;
-
 
         await pool.query(
             `
@@ -196,32 +207,31 @@ app.post("/register", async (req,res)=>{
             [id]
         );
 
-
         res.json({
-            success:true,
+            success: true,
             id,
             nickname
         });
 
-
-    }catch(e){
+    } catch (e) {
 
         console.log(e);
 
         res.json({
-            error:"user exists"
+            error: "user exists"
         });
 
     }
 
 });
 
+// ================= LOGIN =================
 
-app.post("/login", async (req,res)=>{
+app.post("/login", async (req, res) => {
 
-    const {nickname,password}=req.body;
+    const { nickname, password } = req.body;
 
-    try{
+    try {
 
         const result = await pool.query(
             "SELECT * FROM users WHERE nickname=$1",
@@ -230,10 +240,12 @@ app.post("/login", async (req,res)=>{
 
         const user = result.rows[0];
 
-        if(!user){
+        if (!user) {
+
             return res.json({
-                error:"not user found"
+                error: "not user found"
             });
+
         }
 
         const ok = await bcrypt.compare(
@@ -241,42 +253,47 @@ app.post("/login", async (req,res)=>{
             user.password
         );
 
-        if(!ok){
+        if (!ok) {
+
             return res.json({
-                error:"wrong password"
+                error: "wrong password"
             });
+
         }
 
-
         const token = jwt.sign(
-            {id:user.id},
+            {
+                id: user.id
+            },
             SECRET,
-            {expiresIn:"7d"}
+            {
+                expiresIn: "7d"
+            }
         );
-
 
         res.json({
             token,
-            id:user.id,
-            nickname:user.nickname
+            id: user.id,
+            nickname: user.nickname
         });
 
-
-    }catch(e){
+    } catch (e) {
 
         console.log(e);
 
         res.status(500).json({
-            error:e.message
+            error: e.message
         });
 
     }
 
 });
 
-app.delete("/account", auth, async(req,res)=>{
+// ================= DELETE ACCOUNT =================
 
-    try{
+app.delete("/account", auth, async (req, res) => {
+
+    try {
 
         await pool.query(
             "DELETE FROM saves WHERE userid=$1",
@@ -288,133 +305,153 @@ app.delete("/account", auth, async(req,res)=>{
             [req.userId]
         );
 
-
         res.json({
-            success:true
+            success: true
         });
 
-
-    }catch(e){
+    } catch (e) {
 
         res.status(500).json({
-            error:e.message
+            error: e.message
         });
 
     }
 
 });
 
+// ================= CREATE CLAN =================
+
 app.post("/clan/create", auth, async (req, res) => {
 
     const { name } = req.body;
 
-    try{
+    try {
 
         const user = await pool.query(
             "SELECT clan FROM users WHERE id=$1",
             [req.userId]
         );
 
-        if(user.rows[0].clan){
+        if (user.rows[0].clan) {
+
             return res.json({
-                success:false,
-                error:"Вы уже состоите в клане"
+                success: false,
+                error: "Вы уже состоите в клане"
             });
+
         }
 
         const clan = await pool.query(
-            "INSERT INTO clans(name,owner) VALUES($1,$2) RETURNING id",
+            `
+            INSERT INTO clans(name,owner)
+            VALUES($1,$2)
+            RETURNING id
+            `,
             [name, req.userId]
         );
 
         await pool.query(
             "UPDATE users SET clan=$1 WHERE id=$2",
-            [clan.rows[0].id, req.userId]
+            [
+                clan.rows[0].id,
+                req.userId
+            ]
         );
 
-        res.json({success:true});
+        res.json({
+            success: true
+        });
 
-    }catch(e){
+    } catch (e) {
 
         res.json({
-            success:false,
-            error:e.message
+            success: false,
+            error: e.message
         });
 
     }
 
 });
 
-app.get("/clans", async (req,res)=>{
+// ================= CLANS =================
 
-    const result = await pool.query(`
-        SELECT
-            clans.id,
-            clans.name,
-            clans.owner,
+app.get("/clans", async (req, res) => {
 
-            COUNT(users.id) AS members,
+    try {
 
-            COALESCE(
-                json_agg(
-                    json_build_object(
-                        'id', users.id,
-                        'nickname', users.nickname
-                    )
-                ) FILTER (WHERE users.id IS NOT NULL),
-                '[]'
-            ) AS players
+        const result = await pool.query(`
+            SELECT
+                clans.id,
+                clans.name,
+                clans.owner,
 
-        FROM clans
+                COUNT(users.id) AS members,
 
-        LEFT JOIN users
-        ON users.clan = clans.id
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', users.id,
+                            'nickname', users.nickname
+                        )
+                    ) FILTER (WHERE users.id IS NOT NULL),
+                    '[]'
+                ) AS players
 
-        GROUP BY clans.id
+            FROM clans
 
-        ORDER BY members DESC
-    `);
+            LEFT JOIN users
+            ON users.clan = clans.id
 
-    res.json(result.rows);
+            GROUP BY clans.id
+
+            ORDER BY members DESC
+        `);
+
+        res.json(result.rows);
+
+    } catch (e) {
+
+        res.status(500).json({
+            error: e.message
+        });
+
+    }
 
 });
 
-app.post("/clan/join", auth, async(req,res)=>{
+// ================= JOIN CLAN =================
+
+app.post("/clan/join", auth, async (req, res) => {
 
     const clanId = req.body.id;
-
 
     const user = await pool.query(
         "SELECT clan FROM users WHERE id=$1",
         [req.userId]
     );
 
-
-    if(user.rows[0].clan){
+    if (user.rows[0].clan) {
 
         return res.json({
-            success:false,
-            message:"Вы уже в клане"
+            success: false,
+            message: "Вы уже в клане"
         });
 
     }
-
 
     const clan = await pool.query(
         "SELECT id FROM clans WHERE id=$1",
         [clanId]
     );
 
-
-    if(clan.rows.length === 0){
+    if (clan.rows.length === 0) {
 
         return res.json({
-            success:false,
-            message:"Клан не найден"
+            success: false,
+            message: "Клан не найден"
         });
 
     }
-
 
     await pool.query(
         `
@@ -428,14 +465,14 @@ app.post("/clan/join", auth, async(req,res)=>{
         ]
     );
 
-
     res.json({
-        success:true,
-        message:"Заявка отправлена"
+        success: true,
+        message: "Заявка отправлена"
     });
 
-
 });
+
+// ================= LEAVE CLAN =================
 
 app.post("/clan/leave", auth, async (req, res) => {
 
@@ -445,10 +482,12 @@ app.post("/clan/leave", auth, async (req, res) => {
     );
 
     if (!user.rows[0].clan) {
+
         return res.json({
             success: false,
             message: "Вы не состоите в клане"
         });
+
     }
 
     const clan = await pool.query(
@@ -457,10 +496,12 @@ app.post("/clan/leave", auth, async (req, res) => {
     );
 
     if (Number(clan.rows[0].owner) === Number(req.userId)) {
+
         return res.json({
             success: false,
             message: "Владелец должен удалить клан."
         });
+
     }
 
     await pool.query(
@@ -475,6 +516,8 @@ app.post("/clan/leave", auth, async (req, res) => {
 
 });
 
+// ================= MY CLAN =================
+
 app.get("/clan/me", auth, async (req, res) => {
 
     const user = await pool.query(
@@ -483,9 +526,11 @@ app.get("/clan/me", auth, async (req, res) => {
     );
 
     if (!user.rows[0].clan) {
+
         return res.json({
             inClan: false
         });
+
     }
 
     const clan = await pool.query(
@@ -497,10 +542,14 @@ app.get("/clan/me", auth, async (req, res) => {
         inClan: true,
         clanId: user.rows[0].clan,
         clanName: clan.rows[0].name,
-        owner: Number(clan.rows[0].owner) === Number(req.userId)
+        owner:
+            Number(clan.rows[0].owner) ===
+            Number(req.userId)
     });
 
 });
+
+// ================= DELETE CLAN =================
 
 app.delete("/clan/delete", auth, async (req, res) => {
 
@@ -510,30 +559,30 @@ app.delete("/clan/delete", auth, async (req, res) => {
     );
 
     if (!user.rows[0].clan) {
+
         return res.json({
-            success:false,
-            message:"Вы не состоите в клане."
+            success: false,
+            message: "Вы не состоите в клане."
         });
+
     }
 
     const clanId = user.rows[0].clan;
-
 
     const clan = await pool.query(
         "SELECT owner FROM clans WHERE id=$1",
         [clanId]
     );
 
-
     if (Number(clan.rows[0].owner) !== Number(req.userId)) {
+
         return res.json({
-            success:false,
-            message:"Удалить клан может только владелец."
+            success: false,
+            message: "Удалить клан может только владелец."
         });
+
     }
 
-
-    // вернуть 500 монет владельцу
     await pool.query(
         `
         UPDATE saves
@@ -543,37 +592,32 @@ app.delete("/clan/delete", auth, async (req, res) => {
         [req.userId]
     );
 
-
-    // убрать игроков из клана
     await pool.query(
         "UPDATE users SET clan=NULL WHERE clan=$1",
         [clanId]
     );
 
-
-    // удалить клан
     await pool.query(
         "DELETE FROM clans WHERE id=$1",
         [clanId]
     );
 
-
     res.json({
-        success:true,
-        message:"Клан удалён. 500 монет возвращено."
+        success: true,
+        message: "Клан удалён. 500 монет возвращено."
     });
 
 });
 
-app.get("/clan/requests", auth, async(req,res)=>{
+// ================= CLAN REQUESTS =================
 
+app.get("/clan/requests", auth, async (req, res) => {
 
     const result = await pool.query(`
-
         SELECT
-        clan_requests.id,
-        users.nickname,
-        users.id AS userid
+            clan_requests.id,
+            users.nickname,
+            users.id AS userid
 
         FROM clan_requests
 
@@ -584,274 +628,281 @@ app.get("/clan/requests", auth, async(req,res)=>{
         ON users.id = clan_requests.userid
 
         WHERE clans.owner=$1
-
-        `,
+    `,
         [
             req.userId
         ]
     );
 
-
     res.json(result.rows);
-
 
 });
 
+// ================= DEBUG REQUESTS =================
+
 app.get("/debug/requests", async (req, res) => {
+
     try {
+
         const result = await pool.query(`
             SELECT
                 clan_requests.*,
                 users.nickname,
                 clans.name AS clan_name
+
             FROM clan_requests
-            JOIN users ON users.id = clan_requests.userId
-            JOIN clans ON clans.id = clan_requests.clan
+
+            JOIN users
+            ON users.id = clan_requests.userId
+
+            JOIN clans
+            ON clans.id = clan_requests.clan
         `);
 
         res.json(result.rows);
 
     } catch (e) {
+
         res.json({
             error: e.message
         });
+
     }
-});
-
-app.post("/clan/request/accept", auth, async(req,res)=>{
-
-
-const requestId = req.body.id;
-
-
-const request = await pool.query(
-`
-SELECT *
-FROM clan_requests
-WHERE id=$1
-`,
-[
-requestId
-]);
-
-
-if(request.rows.length===0){
-
-return res.json({
-success:false,
-message:"Заявка не найдена"
-});
-
-}
-
-
-
-const data=request.rows[0];
-
-
-
-const owner = await pool.query(
-`
-SELECT owner
-FROM clans
-WHERE id=$1
-`,
-[
-data.clan
-]);
-
-
-
-if(Number(owner.rows[0].owner)!==Number(req.userId)){
-
-return res.json({
-success:false,
-message:"Нет прав"
-});
-
-}
-
-
-
-await pool.query(
-`
-UPDATE users
-SET clan=$1
-WHERE id=$2
-`,
-[
-data.clan,
-data.userid
-]);
-
-
-
-await pool.query(
-`
-DELETE FROM clan_requests
-WHERE id=$1
-`,
-[
-requestId
-]);
-
-
-
-res.json({
-success:true
-});
-
 
 });
 
-app.post("/clan/request/reject", auth, async(req,res)=>{
+// ================= ACCEPT CLAN REQUEST =================
 
+app.post("/clan/request/accept", auth, async (req, res) => {
 
-const request = await pool.query(`
-SELECT 
-clan_requests.clan,
-clans.owner
+    const requestId = req.body.id;
 
-FROM clan_requests
+    const request = await pool.query(
+        `
+        SELECT *
+        FROM clan_requests
+        WHERE id=$1
+        `,
+        [requestId]
+    );
 
-JOIN clans
-ON clans.id = clan_requests.clan
+    if (request.rows.length === 0) {
 
-WHERE clan_requests.id=$1
-`,
-[
-req.body.id
-]);
+        return res.json({
+            success: false,
+            message: "Заявка не найдена"
+        });
 
+    }
 
-if(request.rows.length===0){
-    return res.json({
-        success:false,
-        message:"Заявка не найдена"
+    const data = request.rows[0];
+
+    const owner = await pool.query(
+        `
+        SELECT owner
+        FROM clans
+        WHERE id=$1
+        `,
+        [data.clan]
+    );
+
+    if (
+        !owner.rows.length ||
+        Number(owner.rows[0].owner) !== Number(req.userId)
+    ) {
+
+        return res.json({
+            success: false,
+            message: "Нет прав"
+        });
+
+    }
+
+    await pool.query(
+        `
+        UPDATE users
+        SET clan=$1
+        WHERE id=$2
+        `,
+        [
+            data.clan,
+            data.userid
+        ]
+    );
+
+    await pool.query(
+        `
+        DELETE FROM clan_requests
+        WHERE id=$1
+        `,
+        [requestId]
+    );
+
+    res.json({
+        success: true
     });
-}
 
-
-if(Number(request.rows[0].owner)!==Number(req.userId)){
-    return res.json({
-        success:false,
-        message:"Нет прав"
-    });
-}
-
-
-await pool.query(
-`
-DELETE FROM clan_requests
-WHERE id=$1
-`,
-[
-req.body.id
-]
-);
-
-
-res.json({
-success:true
 });
 
+// ================= REJECT CLAN REQUEST =================
+
+app.post("/clan/request/reject", auth, async (req, res) => {
+
+    const request = await pool.query(`
+        SELECT
+            clan_requests.clan,
+            clans.owner
+
+        FROM clan_requests
+
+        JOIN clans
+        ON clans.id = clan_requests.clan
+
+        WHERE clan_requests.id=$1
+    `,
+        [
+            req.body.id
+        ]
+    );
+
+    if (request.rows.length === 0) {
+
+        return res.json({
+            success: false,
+            message: "Заявка не найдена"
+        });
+
+    }
+
+    if (
+        Number(request.rows[0].owner) !==
+        Number(req.userId)
+    ) {
+
+        return res.json({
+            success: false,
+            message: "Нет прав"
+        });
+
+    }
+
+    await pool.query(
+        `
+        DELETE FROM clan_requests
+        WHERE id=$1
+        `,
+        [req.body.id]
+    );
+
+    res.json({
+        success: true
+    });
 
 });
 
 // ================= SAVE =================
 
-app.post("/save", auth, async(req,res)=>{
+app.post("/save", auth, async (req, res) => {
 
-    const data=req.body;
+    const data = req.body;
 
-    try{
+    try {
 
         await pool.query(
-        `
-        INSERT INTO saves(
-            userId,
-            coins,
-            points,
-            level,
-            playerColor,
-            playerSpeed,
-            playerPower,
-            attackCooldown,
-            attackRange,
-            enemyPowerNerf,
-            speedPrice,
-            powerPrice,
-            attackSpeedPrice,
-            attackRangePrice,
-            nerfPrice,
-            invincible,
-            invincibleTimer,
-            freezeHit,
-            shield,
-            shieldTimer
-        )
-        VALUES(
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,
-            $10,$11,$12,$13,$14,$15,$16,
-            $17,$18,$19,$20
-        )
+            `
+            INSERT INTO saves(
+                userId,
+                coins,
+                points,
+                level,
+                playerColor,
+                playerSpeed,
+                playerPower,
+                attackCooldown,
+                attackRange,
+                enemyPowerNerf,
+                speedPrice,
+                powerPrice,
+                attackSpeedPrice,
+                attackRangePrice,
+                nerfPrice,
+                invincible,
+                invincibleTimer,
+                freezeHit,
+                shield,
+                shieldTimer
+            )
 
-        ON CONFLICT(userId)
-        DO UPDATE SET
+            VALUES(
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,
+                $10,$11,$12,$13,$14,$15,$16,
+                $17,$18,$19,$20
+            )
 
-            coins=EXCLUDED.coins,
-            points=EXCLUDED.points,
-            level=EXCLUDED.level,
-            playerColor=EXCLUDED.playerColor,
+            ON CONFLICT(userId)
+            DO UPDATE SET
 
-            playerSpeed=EXCLUDED.playerSpeed,
-            playerPower=EXCLUDED.playerPower,
+                coins=EXCLUDED.coins,
+                points=EXCLUDED.points,
+                level=EXCLUDED.level,
+                playerColor=EXCLUDED.playerColor,
 
-            attackCooldown=EXCLUDED.attackCooldown,
-            attackRange=EXCLUDED.attackRange,
+                playerSpeed=EXCLUDED.playerSpeed,
+                playerPower=EXCLUDED.playerPower,
 
-            enemyPowerNerf=EXCLUDED.enemyPowerNerf,
+                attackCooldown=EXCLUDED.attackCooldown,
+                attackRange=EXCLUDED.attackRange,
 
-            speedPrice=EXCLUDED.speedPrice,
-            powerPrice=EXCLUDED.powerPrice,
-            attackSpeedPrice=EXCLUDED.attackSpeedPrice,
-            attackRangePrice=EXCLUDED.attackRangePrice,
-            nerfPrice=EXCLUDED.nerfPrice
-        `,
-        [
-            req.userId,
-            data.coins,
-            data.points,
-            data.level,
-            data.playerColor,
-            data.playerSpeed,
-            data.playerPower,
-            data.attackCooldown,
-            data.attackRange,
-            data.enemyPowerNerf,
-            data.speedPrice,
-            data.powerPrice,
-            data.attackSpeedPrice,
-            data.attackRangePrice,
-            data.nerfPrice,
-            data.invincible ? 1:0,
-            data.invincibleTimer,
-            data.freezeHit ? 1:0,
-            data.shield ? 1:0,
-            data.shieldTimer
-        ]);
+                enemyPowerNerf=EXCLUDED.enemyPowerNerf,
+
+                speedPrice=EXCLUDED.speedPrice,
+                powerPrice=EXCLUDED.powerPrice,
+                attackSpeedPrice=EXCLUDED.attackSpeedPrice,
+                attackRangePrice=EXCLUDED.attackRangePrice,
+                nerfPrice=EXCLUDED.nerfPrice,
+
+                invincible=EXCLUDED.invincible,
+                invincibleTimer=EXCLUDED.invincibleTimer,
+
+                freezeHit=EXCLUDED.freezeHit,
+
+                shield=EXCLUDED.shield,
+                shieldTimer=EXCLUDED.shieldTimer
+            `,
+            [
+                req.userId,
+                data.coins,
+                data.points,
+                data.level,
+                data.playerColor,
+                data.playerSpeed,
+                data.playerPower,
+                data.attackCooldown,
+                data.attackRange,
+                data.enemyPowerNerf,
+                data.speedPrice,
+                data.powerPrice,
+                data.attackSpeedPrice,
+                data.attackRangePrice,
+                data.nerfPrice,
+                data.invincible ? 1 : 0,
+                data.invincibleTimer,
+                data.freezeHit ? 1 : 0,
+                data.shield ? 1 : 0,
+                data.shieldTimer
+            ]
+        );
 
         res.json({
-            success:true
+            success: true
         });
 
-
-    }catch(e){
+    } catch (e) {
 
         console.log(e);
 
         res.status(500).json({
-            error:e.message
+            error: e.message
         });
 
     }
@@ -860,55 +911,52 @@ app.post("/save", auth, async(req,res)=>{
 
 // ================= LOAD =================
 
-app.post("/load", auth, async(req,res)=>{
+app.post("/load", auth, async (req, res) => {
 
-    try{
+    try {
 
         const result = await pool.query(
             "SELECT * FROM saves WHERE userid=$1",
             [req.userId]
         );
 
-
-        if(result.rows.length === 0){
+        if (result.rows.length === 0) {
 
             return res.json({
 
-                coins:0,
-                points:0,
-                level:1,
+                coins: 0,
+                points: 0,
+                level: 1,
 
-                playerColor:"#ff0000",
+                playerColor: "#ff0000",
 
-                playerSpeed:6,
-                playerPower:100,
+                playerSpeed: 6,
+                playerPower: 100,
 
-                attackCooldown:800,
-                attackRange:50,
+                attackCooldown: 800,
+                attackRange: 50,
 
-                enemyPowerNerf:1,
+                enemyPowerNerf: 1,
 
-                speedPrice:100,
-                powerPrice:200,
-                attackSpeedPrice:250,
-                attackRangePrice:250,
-                nerfPrice:300,
+                speedPrice: 100,
+                powerPrice: 200,
+                attackSpeedPrice: 250,
+                attackRangePrice: 250,
+                nerfPrice: 300,
 
-                invincible:false,
-                invincibleTimer:0,
+                invincible: false,
+                invincibleTimer: 0,
 
-                freezeHit:false,
+                freezeHit: false,
 
-                shield:false,
-                shieldTimer:0
+                shield: false,
+                shieldTimer: 0
 
             });
 
         }
 
-
         const row = result.rows[0];
-
 
         res.json({
 
@@ -942,18 +990,19 @@ app.post("/load", auth, async(req,res)=>{
 
         });
 
+    } catch (e) {
 
-    }catch(e){
-
-        console.log("LOAD ERROR:",e);
+        console.log("LOAD ERROR:", e);
 
         res.status(500).json({
-            error:e.message
+            error: e.message
         });
 
     }
 
 });
+
+// ================= PLAYER SEARCH =================
 
 app.get("/player/:query", (req, res) => {
 
@@ -999,167 +1048,173 @@ app.get("/player/:query", (req, res) => {
         WHERE users.id = $1
         OR users.nickname = $2
         `,
-        [Number(query) || -1, query],
+        [
+            Number(query) || -1,
+            query
+        ],
         (err, result) => {
 
-            console.log("SQL ERROR:",err);
-            console.log("SQL ROW:",result.rows);
+            if (err) {
 
+                console.log("SQL ERROR:", err);
 
-            if(err){
                 return res.status(500).json({
-                    success:false,
-                    error:err.message
+                    success: false,
+                    error: err.message
                 });
+
             }
-        
-        
+
             const row = result.rows[0];
-                    
-                    
-            if(!row){
+
+            if (!row) {
+
                 return res.json({
-                    success:false,
-                    message:"No row"
+                    success: false,
+                    message: "No row"
                 });
+
             }
-            
-            
+
             let playerTitle = "beginner lvl.1";
-            
-            if(row.points >= 1000000){
+
+            if (row.points >= 1000000) {
                 playerTitle = "GRAND MASTER";
             }
-            else if(row.points >= 500000){
+            else if (row.points >= 500000) {
                 playerTitle = "master lvl.3";
             }
-            else if(row.points >= 300000){
+            else if (row.points >= 300000) {
                 playerTitle = "master lvl.2";
             }
-            else if(row.points >= 100000){
+            else if (row.points >= 100000) {
                 playerTitle = "master lvl.1";
             }
-            else if(row.points >= 50000){
+            else if (row.points >= 50000) {
                 playerTitle = "expert lvl.3";
             }
-            else if(row.points >= 30000){
+            else if (row.points >= 30000) {
                 playerTitle = "expert lvl.2";
             }
-            else if(row.points >= 10000){
+            else if (row.points >= 10000) {
                 playerTitle = "expert lvl.1";
             }
-            else if(row.points >= 5000){
+            else if (row.points >= 5000) {
                 playerTitle = "pro lvl.3";
             }
-            else if(row.points >= 3000){
+            else if (row.points >= 3000) {
                 playerTitle = "pro lvl.2";
             }
-            else if(row.points >= 1000){
+            else if (row.points >= 1000) {
                 playerTitle = "pro lvl.1";
             }
-            else if(row.points >= 500){
+            else if (row.points >= 500) {
                 playerTitle = "player lvl.3";
             }
-            else if(row.points >= 300){
+            else if (row.points >= 300) {
                 playerTitle = "player lvl.2";
             }
-            else if(row.points >= 200){
+            else if (row.points >= 200) {
                 playerTitle = "player lvl.1";
             }
-            else if(row.points >= 100){
+            else if (row.points >= 100) {
                 playerTitle = "beginner lvl.3";
             }
-            else if(row.points >= 50){
+            else if (row.points >= 50) {
                 playerTitle = "beginner lvl.2";
             }
-            
-            
+
             res.json({
-                success:true,
+                success: true,
                 ...row,
                 playerTitle
             });
-        
+
         }
     );
 
 });
 
-app.get("/debug/users", async(req,res)=>{
+// ================= DEBUG USERS =================
 
-try{
+app.get("/debug/users", async (req, res) => {
 
-const result=await pool.query(
-"SELECT id,nickname FROM users"
-);
+    try {
 
-res.json(result.rows);
+        const result = await pool.query(
+            "SELECT id,nickname FROM users"
+        );
 
-}catch(e){
+        res.json(result.rows);
 
-res.json({
-error:e.message
-});
+    } catch (e) {
 
-}
+        res.json({
+            error: e.message
+        });
 
-});
-
-app.get("/debug/saves", async(req,res)=>{
-
-try{
-
-const result=await pool.query(
-"SELECT * FROM saves"
-);
-
-res.json(result.rows);
-
-}catch(e){
-
-res.json({
-error:e.message
-});
-
-}
+    }
 
 });
 
-app.get("/debug/player/:id", async(req,res)=>{
+// ================= DEBUG SAVES =================
 
-try{
+app.get("/debug/saves", async (req, res) => {
 
-const user = await pool.query(
-"SELECT * FROM users WHERE id=$1",
-[req.params.id]
-);
+    try {
 
+        const result = await pool.query(
+            "SELECT * FROM saves"
+        );
 
-const save = await pool.query(
-"SELECT * FROM saves WHERE userid=$1",
-[req.params.id]
-);
+        res.json(result.rows);
 
+    } catch (e) {
 
-res.json({
-    user:user.rows[0],
-    save:save.rows[0]
-});
+        res.json({
+            error: e.message
+        });
 
-
-}catch(e){
-
-res.json({
-    error:e.message
-});
-
-}
+    }
 
 });
 
-app.post("/fixsave/:id", async (req,res)=>{
+// ================= DEBUG PLAYER =================
 
-    try{
+app.get("/debug/player/:id", async (req, res) => {
+
+    try {
+
+        const user = await pool.query(
+            "SELECT * FROM users WHERE id=$1",
+            [req.params.id]
+        );
+
+        const save = await pool.query(
+            "SELECT * FROM saves WHERE userid=$1",
+            [req.params.id]
+        );
+
+        res.json({
+            user: user.rows[0],
+            save: save.rows[0]
+        });
+
+    } catch (e) {
+
+        res.json({
+            error: e.message
+        });
+
+    }
+
+});
+
+// ================= FIX SAVE =================
+
+app.post("/fixsave/:id", async (req, res) => {
+
+    try {
 
         const result = await pool.query(
             `
@@ -1185,8 +1240,15 @@ app.post("/fixsave/:id", async (req,res)=>{
                 shield,
                 shieldTimer
             )
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+
+            VALUES(
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,
+                $10,$11,$12,$13,$14,$15,$16,
+                $17,$18,$19,$20
+            )
+
             ON CONFLICT(userId) DO NOTHING
+
             RETURNING userId
             `,
             [
@@ -1198,33 +1260,44 @@ app.post("/fixsave/:id", async (req,res)=>{
                 6,
                 100,
                 800,
-                50
+                50,
+                1,
+                100,
+                200,
+                250,
+                250,
+                300,
+                0,
+                0,
+                0,
+                0,
+                0
             ]
         );
 
-
         res.json({
-            success:true,
-            id:Number(req.params.id)
+            success: true,
+            id: Number(req.params.id)
         });
 
+    } catch (e) {
 
-    }catch(e){
-
-        console.log("FIXSAVE ERROR:",e);
+        console.log("FIXSAVE ERROR:", e);
 
         res.json({
-            success:false,
-            error:e.message
+            success: false,
+            error: e.message
         });
 
     }
 
 });
 
-app.get("/fixdatabase", async(req,res)=>{
+// ================= FIX DATABASE =================
 
-    try{
+app.get("/fixdatabase", async (req, res) => {
+
+    try {
 
         await pool.query(`
             UPDATE saves
@@ -1241,28 +1314,30 @@ app.get("/fixdatabase", async(req,res)=>{
         `);
 
         res.json({
-            success:true
+            success: true
         });
 
-    }catch(e){
+    } catch (e) {
 
         console.log(e);
 
         res.json({
-            success:false,
-            error:e.message
+            success: false,
+            error: e.message
         });
 
     }
 
 });
 
-// ================= SOCKET.IO =================
+// ============================================================
+// ================= SOCKET.IO ================================
+// ============================================================
 
-const io = new Server(server,{
+const io = new Server(server, {
 
-    cors:{
-        origin:"*"
+    cors: {
+        origin: "*"
     }
 
 });
@@ -1270,54 +1345,90 @@ const io = new Server(server,{
 const players = {};
 const pvpCooldown = {};
 
-io.on("connection",socket=>{
+// ============================================================
+// ================= CHAT ======================================
+// ============================================================
 
-    console.log("Connected:",socket.id);
+// Максимальная длина сообщения
+const CHAT_MAX_LENGTH = 200;
 
-    players[socket.id]={
+// Простейшая очистка HTML,
+// чтобы пользователь не мог отправить <script>
+function sanitizeChatMessage(message) {
 
-        x:3000,
-        y:100,
+    return String(message)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .trim();
 
-        nickname:"Player",
-        color:"#ff0000",
+}
 
-        playerTitle:"beginner lvl.1",
+// ============================================================
+// ================= CONNECTION ================================
+// ============================================================
 
-        userId:null,
-        clan:null,
+io.on("connection", socket => {
 
-        playerPoint:1,
+    console.log("Connected:", socket.id);
 
-        map:0
+    players[socket.id] = {
+
+        x: 3000,
+        y: 100,
+
+        nickname: "Player",
+        color: "#ff0000",
+
+        playerTitle: "beginner lvl.1",
+
+        userId: null,
+        clan: null,
+
+        playerPoint: 1,
+
+        map: 0
 
     };
 
-    io.emit("players",players);
+    io.emit("players", players);
 
-    socket.on("move", async (data) => {
+    // ========================================================
+    // ================= MOVE =================================
+    // ========================================================
+
+    socket.on("move", async data => {
 
         if (!data || typeof data !== "object") return;
         if (!players[socket.id]) return;
 
-
         let clan = players[socket.id].clan;
 
+        if (data.userId) {
 
-        if(data.userId){
+            try {
 
-            const result = await pool.query(
-                "SELECT clan FROM users WHERE id=$1",
-                [data.userId]
-            );
+                const result = await pool.query(
+                    "SELECT clan FROM users WHERE id=$1",
+                    [data.userId]
+                );
 
+                if (result.rows.length) {
+                    clan = result.rows[0].clan;
+                }
 
-            if(result.rows.length){
-                clan = result.rows[0].clan;
+            } catch (e) {
+
+                console.log(
+                    "MOVE CLAN ERROR:",
+                    e.message
+                );
+
             }
 
         }
-
 
         players[socket.id] = {
 
@@ -1328,88 +1439,185 @@ io.on("connection",socket=>{
 
         };
 
+        io.emit("players", players);
+
+    });
+
+    // ========================================================
+    // ================= PLAYER DATA ===========================
+    // ========================================================
+
+    socket.on("setPlayerData", async data => {
+
+        if (!data || !data.userId) return;
+        if (!players[socket.id]) return;
+
+        players[socket.id].userId = data.userId;
+        players[socket.id].nickname =
+            data.nickname || "Player";
+
+        players[socket.id].playerPoint =
+            data.playerPoint || 1;
+
+        try {
+
+            const result = await pool.query(
+                "SELECT clan FROM users WHERE id=$1",
+                [data.userId]
+            );
+
+            if (result.rows.length) {
+
+                players[socket.id].clan =
+                    result.rows[0].clan;
+
+            }
+
+        } catch (e) {
+
+            console.log(
+                "SET PLAYER DATA ERROR:",
+                e.message
+            );
+
+        }
 
         io.emit("players", players);
 
     });
 
-    socket.on("setPlayerData", async(data)=>{
-    
-        if(!data.userId) return;
-    
-        players[socket.id].userId = data.userId;
-        players[socket.id].nickname = data.nickname;
-    
-        players[socket.id].playerPoint =
-            data.playerPoint || 1;
-    
-    });
+    // ========================================================
+    // ================= UPDATE TITLE ==========================
+    // ========================================================
 
-    socket.on("updateTitle",(title)=>{
+    socket.on("updateTitle", title => {
 
-        if(players[socket.id]){
-            players[socket.id].playerTitle = title;
+        if (players[socket.id]) {
+
+            players[socket.id].playerTitle =
+                String(title).substring(0, 50);
+
         }
 
     });
 
-    socket.on("pvpHit", (victimId) => {
-    
+    // ========================================================
+    // ================= CHAT =================================
+    // ========================================================
+
+    socket.on("chatMessage", data => {
+
+        if (!players[socket.id]) return;
+
+        let message = "";
+
+        if (typeof data === "string") {
+            message = data;
+        }
+        else if (data && typeof data.message === "string") {
+            message = data.message;
+        }
+
+        message = sanitizeChatMessage(message);
+
+        if (!message) return;
+
+        if (message.length > CHAT_MAX_LENGTH) {
+            message = message.substring(
+                0,
+                CHAT_MAX_LENGTH
+            );
+        }
+
+        const player = players[socket.id];
+
+        const chatData = {
+
+            socketId: socket.id,
+
+            userId: player.userId || null,
+
+            nickname:
+                player.nickname || "Player",
+
+            color:
+                player.color || "#ffffff",
+
+            playerTitle:
+                player.playerTitle ||
+                "beginner lvl.1",
+
+            message,
+
+            time: Date.now()
+
+        };
+
+        // Отправляем сообщение ВСЕМ игрокам
+        io.emit("chatMessage", chatData);
+
+    });
+
+    // ========================================================
+    // ================= PVP HIT ===============================
+    // ========================================================
+
+    socket.on("pvpHit", victimId => {
+
         const now = Date.now();
-    
-        // защита от спама ударами
-        if(
+
+        if (
             pvpCooldown[socket.id] &&
             now - pvpCooldown[socket.id] < 300
-        ){
+        ) {
             return;
         }
-    
+
         pvpCooldown[socket.id] = now;
-    
-    
+
         const attacker = players[socket.id];
         const victim = players[victimId];
-    
-    
-        if(!attacker || !victim) return;
-    
-    
-        // нельзя бить себя
-        if(socket.id === victimId) return;
-    
-    
-        // проверяем карту
-        if(attacker.map !== 3 || victim.map !== 3){
+
+        if (!attacker || !victim) return;
+
+        if (socket.id === victimId) return;
+
+        if (
+            attacker.map !== 3 ||
+            victim.map !== 3
+        ) {
             return;
         }
-    
-    
-        // нельзя бить свой клан
-        if(
+
+        if (
             attacker.clan &&
             victim.clan &&
-            Number(attacker.clan) === Number(victim.clan)
-        ){
+            Number(attacker.clan) ===
+            Number(victim.clan)
+        ) {
             return;
         }
-    
-    
-        // отправляем урон
+
         io.to(victimId).emit("damage", {
+
             knockX:
                 attacker.x < victim.x
-                ? 50
-                : -50,
-                
+                    ? 50
+                    : -50,
+
             knockY: -20,
-                
+
             attackerId: socket.id
+
         });
-    
+
     });
 
-    socket.on("playerDeath", async (killerId)=>{
+    // ========================================================
+    // ================= PLAYER DEATH ==========================
+    // ========================================================
+
+    socket.on("playerDeath", async killerId => {
 
         console.log("PLAYER DEATH EVENT");
         console.log("victim socket:", socket.id);
@@ -1418,20 +1626,23 @@ io.on("connection",socket=>{
         const victim = players[socket.id];
         const killer = players[killerId];
 
-        if(!victim || !killer) return;
+        if (!victim || !killer) return;
 
-        if(!killer.userId) return;
+        if (!killer.userId) return;
 
+        const reward1 =
+            5 * (victim.playerPoint || 1);
 
-        const reward1 = 5 * (victim.playerPoint);
-        const reward2 = (victim.playerPoint);
-
+        const reward2 =
+            victim.playerPoint || 1;
 
         players[killerId].points =
-            (players[killerId].points || 0) + reward1;
-        players[killerId].coins =
-            (players[killerId].coins || 0) + reward2;
+            (players[killerId].points || 0) +
+            reward1;
 
+        players[killerId].coins =
+            (players[killerId].coins || 0) +
+            reward2;
 
         await pool.query(
             `
@@ -1448,37 +1659,62 @@ io.on("connection",socket=>{
             ]
         );
 
-
-        io.to(killerId).emit("pointsReward",{
-            amount1: reward1,
-            amount2: reward2
-        });
-
+        io.to(killerId).emit(
+            "pointsReward",
+            {
+                amount1: reward1,
+                amount2: reward2
+            }
+        );
 
     });
 
-    socket.on("disconnect",()=>{
+    // ========================================================
+    // ================= DISCONNECT ============================
+    // ========================================================
+
+    socket.on("disconnect", () => {
 
         delete players[socket.id];
 
-        io.emit("players",players);
+        delete pvpCooldown[socket.id];
 
-        console.log("Disconnected:",socket.id);
-
-    });
-
-});
-
-// ================= START =================
-
-initDB().then(()=>{
-
-    server.listen(PORT,"0.0.0.0",()=>{
+        io.emit("players", players);
 
         console.log(
-            `Server running on port ${PORT}`
+            "Disconnected:",
+            socket.id
         );
 
     });
 
 });
+
+// ================= START SERVER =================
+
+initDB()
+    .then(() => {
+
+        server.listen(
+            PORT,
+            "0.0.0.0",
+            () => {
+
+                console.log(
+                    `Server running on port ${PORT}`
+                );
+
+            }
+        );
+
+    })
+    .catch(err => {
+
+        console.error(
+            "DATABASE INIT ERROR:",
+            err
+        );
+
+        process.exit(1);
+
+    });
