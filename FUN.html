@@ -888,12 +888,13 @@ socket.on("pointsReward", data => {
 });
 socket.on("chatHistory", (messages) => {
 
-    console.log("CHAT HISTORY:", messages);
+    console.log("CHAT HISTORY RECEIVED:", messages);
 
-    const chatMessages = document.getElementById("chatMessages");
+    const chatMessages =
+        document.getElementById("chatMessages");
 
     if (!chatMessages) {
-        console.log("chatMessages не найден");
+        console.error("Нет элемента #chatMessages");
         return;
     }
 
@@ -905,17 +906,17 @@ socket.on("chatHistory", (messages) => {
 
         div.className = "chat-message";
 
-        div.innerHTML = `
-            <b>${escapeHtml(msg.nickname)}</b>: 
-            ${escapeHtml(msg.message)}
-        `;
+        div.textContent =
+            `${msg.nickname}: ${msg.message}`;
 
         chatMessages.appendChild(div);
 
     });
 
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    chatMessages.scrollTop =
+        chatMessages.scrollHeight;
 });
+
 
 
 
