@@ -126,6 +126,17 @@ async function initDB(){
     `);
 
     await pool.query(`
+        CREATE TABLE IF NOT EXISTS chat_messages(
+            id SERIAL PRIMARY KEY,
+            userId INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            nickname TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created TIMESTAMP DEFAULT NOW()
+        )
+    `);
+
+
+    await pool.query(`
         ALTER TABLE saves
         ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0
     `);
@@ -1301,7 +1312,7 @@ const io = new Server(server,{
 const players = {};
 const pvpCooldown = {};
 
-io.on("connection",socket=>{
+io.on("connection", async (socket) => {
 
     console.log("Connected:",socket.id);
 
@@ -1325,6 +1336,97 @@ io.on("connection",socket=>{
     };
 
     io.emit("players",players);
+
+    // ================= CHAT LOAD =================
+
+    try {
+
+        const result = await pool.query(`
+            SELECT
+                id,
+                userid,
+                nickname,
+                message,
+                created
+            FROM chat_messages
+            ORDER BY id ASC
+        `);
+
+        socket.emit("chatHistory", result.rows);
+
+    } catch(e) {
+
+        console.log("CHAT LOAD ERROR:", e);
+
+    }
+
+    // ================= CHAT =================
+
+    socket.on("chatMessage", async (data) => {
+
+        try {
+
+            if (!players[socket.id]) return;
+
+            const message = String(data?.message || "").trim();
+
+            if (!message) return;
+
+            if (message.length > 300) return;
+
+            const userId = players[socket.id].userId;
+
+            if (!userId) return;
+
+            const nickname =
+                players[socket.id].nickname || "Player";
+
+            // сохраняем сообщение
+            const result = await pool.query(`
+                INSERT INTO chat_messages(
+                    userId,
+                    nickname,
+                    message
+                )
+                VALUES($1,$2,$3)
+                RETURNING
+                    id,
+                    userid,
+                    nickname,
+                    message,
+                    created
+            `, [
+                userId,
+                nickname,
+                message
+            ]);
+
+            const newMessage = result.rows[0];
+
+            // если сообщений больше 50 —
+            // удаляем самые старые
+            await pool.query(`
+                DELETE FROM chat_messages
+                WHERE id NOT IN (
+                    SELECT id
+                    FROM chat_messages
+                    ORDER BY id DESC
+                    LIMIT 50
+                )
+            `);
+
+            // отправляем новое сообщение всем игрокам
+            io.emit("chatMessage", newMessage);
+
+        } catch(e) {
+
+            console.log("CHAT ERROR:", e);
+
+        }
+
+    });
+
+
 
     // ================= MOVE =================
 
