@@ -1372,6 +1372,17 @@ function sanitizeChatMessage(message) {
 
 io.on("connection", socket => {
 
+    console.log("CONNECTED:", socket.id);
+
+    socket.on("chatMessage", data => {
+        console.log("CHAT MESSAGE:", data);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("DISCONNECTED:", socket.id);
+    });
+
+
     console.log("Connected:", socket.id);
 
     players[socket.id] = {
