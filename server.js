@@ -1340,6 +1340,9 @@ io.on("connection", async (socket) => {
     // ================= CHAT LOAD =================
 
     socket.on("chatMessage", async (data) => {
+    
+        console.log("CHAT MESSAGE RECEIVED:", data);
+    
         try {
             if (!data || !data.message) return;
         
@@ -1348,20 +1351,20 @@ io.on("connection", async (socket) => {
         
             if (!message) return;
         
-            const result = await pool.query(
-                `
+            console.log("SAVING CHAT:", nickname, message);
+        
+            const result = await pool.query(`
                 INSERT INTO chat_messages (nickname, message)
                 VALUES ($1, $2)
                 RETURNING id, nickname, message, created_at
-                `,
-                [nickname, message]
-            );
-        
+            `, [nickname, message]);
+            
+            console.log("CHAT SAVED:", result.rows[0]);
+            
             const msg = result.rows[0];
-        
+            
             io.emit("chatMessage", msg);
-        
-            // Оставляем только последние 50 сообщений
+            
             await pool.query(`
                 DELETE FROM chat_messages
                 WHERE id NOT IN (
@@ -1376,6 +1379,7 @@ io.on("connection", async (socket) => {
             console.error("CHAT SAVE ERROR:", e);
         }
     });
+
 
 
     // ================= CHAT =================
