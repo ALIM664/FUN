@@ -1339,29 +1339,44 @@ io.on("connection", async (socket) => {
 
     // ================= CHAT LOAD =================
 
-    try {
+    socket.on("chatMessage", async (data) => {
+        try {
+            if (!data || !data.message) return;
+        
+            const nickname = data.nickname || "Player";
+            const message = String(data.message).trim();
+        
+            if (!message) return;
+        
+            const result = await pool.query(
+                `
+                INSERT INTO chat_messages (nickname, message)
+                VALUES ($1, $2)
+                RETURNING id, nickname, message, created_at
+                `,
+                [nickname, message]
+            );
+        
+            const msg = result.rows[0];
+        
+            io.emit("chatMessage", msg);
+        
+            // Оставляем только последние 50 сообщений
+            await pool.query(`
+                DELETE FROM chat_messages
+                WHERE id NOT IN (
+                    SELECT id
+                    FROM chat_messages
+                    ORDER BY id DESC
+                    LIMIT 50
+                )
+            `);
+            
+        } catch (e) {
+            console.error("CHAT SAVE ERROR:", e);
+        }
+    });
 
-        const result = await pool.query(`
-            SELECT
-                id,
-                userid,
-                nickname,
-                message,
-                created
-            FROM chat_messages
-            ORDER BY id ASC
-            LIMIT 50
-        `);
-
-        console.log("CHAT HISTORY SENT:", result.rows.length);
-
-        socket.emit("chatHistory", result.rows);
-
-    } catch (e) {
-
-        console.error("CHAT HISTORY ERROR:", e);
-
-    }
 
     // ================= CHAT =================
 
