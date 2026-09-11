@@ -919,26 +919,33 @@ socket.on("chatHistory", (messages) => {
 
 
 
-socket.on("chatMessage", (msg) => {
+socket.on("chatMessage", (data) => {
 
-    const chatMessages = document.getElementById("chatMessages");
+    const messages = document.getElementById("chatMessages");
 
-    if (!chatMessages) return;
+    if (!messages) return;
 
-    const div = document.createElement("div");
+    const message = document.createElement("div");
 
-    div.className = "chat-message";
+    message.className = "chatMessage";
 
-    div.innerHTML = `
-        <b>${escapeHtml(msg.nickname)}</b>: 
-        ${escapeHtml(msg.message)}
-    `;
+    const nickname = document.createElement("span");
 
-    chatMessages.appendChild(div);
+    nickname.className = "chatNickname";
+    nickname.textContent = data.nickname + ": ";
 
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    const text = document.createElement("span");
+
+    text.textContent = data.text;
+
+    message.appendChild(nickname);
+    message.appendChild(text);
+
+    messages.appendChild(message);
+
+    messages.scrollTop = messages.scrollHeight;
+
 });
-
 
 document.addEventListener("keydown", (e) => {
 
