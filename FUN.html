@@ -888,34 +888,24 @@ socket.on("pointsReward", data => {
 });
 socket.on("chatHistory", (messages) => {
 
-    console.log("CHAT HISTORY RECEIVED:", messages);
+    const chat = document.getElementById("chatMessages");
 
-    const chatMessages =
-        document.getElementById("chatMessages");
+    if (!chat) return;
 
-    if (!chatMessages) {
-        console.error("Нет элемента #chatMessages");
-        return;
-    }
+    chat.innerHTML = "";
 
-    chatMessages.innerHTML = "";
-
-    messages.forEach(msg => {
-
-        const div = document.createElement("div");
-
-        div.className = "chat-message";
-
-        div.textContent =
-            `${msg.nickname}: ${msg.message}`;
-
-        chatMessages.appendChild(div);
-
+    messages.forEach(message => {
+        addChatMessage(message);
     });
 
-    chatMessages.scrollTop =
-        chatMessages.scrollHeight;
 });
+
+socket.on("chatMessage", (message) => {
+
+    addChatMessage(message);
+
+});
+
 
 
 
@@ -1929,6 +1919,29 @@ function escapeHtml(text) {
 
     return div.innerHTML;
 }
+
+function addChatMessage(message) {
+
+    const chat = document.getElementById("chatMessages");
+
+    if (!chat) return;
+
+    const div = document.createElement("div");
+
+    const nickname = escapeHtml(message.nickname);
+    const text = escapeHtml(message.text);
+
+    div.innerHTML = `
+        <b>${nickname}:</b> ${text}
+    `;
+
+    chat.appendChild(div);
+
+    // Прокрутка вниз
+    chat.scrollTop = chat.scrollHeight;
+
+}
+
 
 
 
