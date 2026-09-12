@@ -1301,12 +1301,10 @@ app.get("/fixdatabase", async(req,res)=>{
 
 // ================= SOCKET.IO =================
 
-const io = new Server(server,{
-
-    cors:{
-        origin:"*"
+const io = new Server(server, {
+    cors: {
+        origin: "*"
     }
-
 });
 
 const players = {};
@@ -1314,103 +1312,111 @@ const pvpCooldown = {};
 
 io.on("connection", async (socket) => {
 
-    console.log("Connected:",socket.id);
+    console.log("Connected:", socket.id);
 
-    players[socket.id]={
+    players[socket.id] = {
 
-        x:3000,
-        y:100,
+        x: 3000,
+        y: 100,
 
-        nickname:"Player",
-        color:"#ff0000",
+        nickname: "Player",
+        color: "#ff0000",
 
-        playerTitle:"beginner lvl.1",
+        playerTitle: "beginner lvl.1",
 
-        userId:null,
-        clan:null,
+        userId: null,
+        clan: null,
 
-        playerPoint:1,
+        playerPoint: 1,
 
-        map:0
+        map: 0
 
     };
 
-    io.emit("players",players);
+    io.emit("players", players);
+
 
     // ================= CHAT LOAD =================
+    // Загружаем последние 50 сообщений
+    // только что подключившемуся игроку
 
-    socket.on("chatMessage", async (data) => {
-    
-        console.log("CHAT MESSAGE RECEIVED:", data);
-    
-        try {
-            if (!data || !data.message) return;
-        
-            const nickname = data.nickname || "Player";
-            const message = String(data.message).trim();
-        
-            if (!message) return;
-        
-            console.log("SAVING CHAT:", nickname, message);
-        
-            const result = await pool.query(`
-                INSERT INTO chat_messages (nickname, message)
-                VALUES ($1, $2)
-                RETURNING id, nickname, message, created_at
-            `, [nickname, message]);
-            
-            console.log("CHAT SAVED:", result.rows[0]);
-            
-            const msg = result.rows[0];
-            
-            io.emit("chatMessage", msg);
-            
-            await pool.query(`
-                DELETE FROM chat_messages
-                WHERE id NOT IN (
-                    SELECT id
-                    FROM chat_messages
-                    ORDER BY id DESC
-                    LIMIT 50
-                )
-            `);
-            
-        } catch (e) {
-            console.error("CHAT SAVE ERROR:", e);
-        }
-    });
+    try {
+
+        const result = await pool.query(`
+            SELECT
+                id,
+                userid,
+                nickname,
+                message,
+                created
+            FROM chat_messages
+            ORDER BY id DESC
+            LIMIT 50
+        `);
+
+        // Сейчас сообщения идут от новых к старым.
+        // Разворачиваем, чтобы в чате они были по порядку:
+        // старое -> новое
+
+        const messages = result.rows.reverse();
+
+        socket.emit("chatHistory", messages);
+
+        console.log(
+            `CHAT HISTORY SENT TO ${socket.id}: ${messages.length} messages`
+        );
+
+    } catch (e) {
+
+        console.error("CHAT LOAD ERROR:", e);
+
+    }
 
 
-
-    // ================= CHAT =================
+    // ================= CHAT MESSAGE =================
 
     socket.on("chatMessage", async (data) => {
 
         try {
 
-            if (!players[socket.id]) return;
+            if (!players[socket.id]) {
+                return;
+            }
 
-            const message = String(data?.message || "").trim();
+            if (!data || typeof data.message !== "string") {
+                return;
+            }
 
-            if (!message) return;
+            const message = data.message.trim();
 
-            if (message.length > 300) return;
+            if (!message) {
+                return;
+            }
 
-            const userId = players[socket.id].userId;
+            // Максимальная длина сообщения
+            if (message.length > 300) {
+                return;
+            }
 
-            if (!userId) return;
+            const player = players[socket.id];
 
-            const nickname =
-                players[socket.id].nickname || "Player";
+            // Пользователь должен быть авторизован
+            if (!player.userId) {
+                return;
+            }
 
-            // сохраняем сообщение
+            const nickname = player.nickname || "Player";
+
+
+            // ================= SAVE MESSAGE =================
+
             const result = await pool.query(`
                 INSERT INTO chat_messages(
                     userId,
                     nickname,
                     message
                 )
-                VALUES($1,$2,$3)
+                VALUES($1, $2, $3)
                 RETURNING
                     id,
                     userid,
@@ -1418,15 +1424,17 @@ io.on("connection", async (socket) => {
                     message,
                     created
             `, [
-                userId,
+                player.userId,
                 nickname,
                 message
             ]);
 
             const newMessage = result.rows[0];
 
-            // если сообщений больше 50 —
-            // удаляем самые старые
+
+            // ================= DELETE OLD =================
+            // Оставляем только последние 50 сообщений
+
             await pool.query(`
                 DELETE FROM chat_messages
                 WHERE id NOT IN (
@@ -1437,17 +1445,19 @@ io.on("connection", async (socket) => {
                 )
             `);
 
-            // отправляем новое сообщение всем игрокам
+
+            // ================= SEND MESSAGE =================
+            // Отправляем новое сообщение всем игрокам
+
             io.emit("chatMessage", newMessage);
 
-        } catch(e) {
+        } catch (e) {
 
-            console.log("CHAT ERROR:", e);
+            console.error("CHAT ERROR:", e);
 
         }
 
     });
-
 
 
     // ================= MOVE =================
@@ -1460,17 +1470,15 @@ io.on("connection", async (socket) => {
 
         let clan = players[socket.id].clan;
 
-        if(data.userId){
+        if (data.userId) {
 
             const result = await pool.query(
                 "SELECT clan FROM users WHERE id=$1",
                 [data.userId]
             );
 
-            if(result.rows.length){
-
+            if (result.rows.length) {
                 clan = result.rows[0].clan;
-
             }
 
         }
@@ -1488,11 +1496,12 @@ io.on("connection", async (socket) => {
 
     });
 
+
     // ================= PLAYER DATA =================
 
-    socket.on("setPlayerData", async(data)=>{
+    socket.on("setPlayerData", async (data) => {
 
-        if(!data.userId) return;
+        if (!data.userId) return;
 
         players[socket.id].userId = data.userId;
 
@@ -1503,11 +1512,12 @@ io.on("connection", async (socket) => {
 
     });
 
+
     // ================= UPDATE TITLE =================
 
-    socket.on("updateTitle",(title)=>{
+    socket.on("updateTitle", (title) => {
 
-        if(players[socket.id]){
+        if (players[socket.id]) {
 
             players[socket.id].playerTitle = title;
 
@@ -1515,39 +1525,6 @@ io.on("connection", async (socket) => {
 
     });
 
-    // ================= CHAT =================
-
-    socket.on("chatMessage", (data) => {
-
-        if (!data || typeof data.text !== "string") {
-            return;
-        }
-
-        const text = data.text.trim();
-
-        if (!text) {
-            return;
-        }
-
-        if (text.length > 200) {
-            return;
-        }
-
-        const player = players[socket.id];
-
-        if (!player) {
-            return;
-        }
-
-        io.emit("chatMessage", {
-
-            nickname: player.nickname || "Player",
-
-            text: text
-
-        });
-
-    });
 
     // ================= PVP HIT =================
 
@@ -1555,13 +1532,11 @@ io.on("connection", async (socket) => {
 
         const now = Date.now();
 
-        if(
+        if (
             pvpCooldown[socket.id] &&
             now - pvpCooldown[socket.id] < 300
-        ){
-
+        ) {
             return;
-
         }
 
         pvpCooldown[socket.id] = now;
@@ -1570,30 +1545,28 @@ io.on("connection", async (socket) => {
 
         const victim = players[victimId];
 
-        if(!attacker || !victim) return;
+        if (!attacker || !victim) return;
 
-        if(socket.id === victimId) return;
+        if (socket.id === victimId) return;
 
-        if(attacker.map !== 3 || victim.map !== 3){
+        if (attacker.map !== 3 || victim.map !== 3) {
             return;
         }
 
-        if(
+        if (
             attacker.clan &&
             victim.clan &&
             Number(attacker.clan) === Number(victim.clan)
-        ){
-
+        ) {
             return;
-
         }
 
         io.to(victimId).emit("damage", {
 
             knockX:
                 attacker.x < victim.x
-                ? 50
-                : -50,
+                    ? 50
+                    : -50,
 
             knockY: -20,
 
@@ -1603,9 +1576,10 @@ io.on("connection", async (socket) => {
 
     });
 
+
     // ================= PLAYER DEATH =================
 
-    socket.on("playerDeath", async (killerId)=>{
+    socket.on("playerDeath", async (killerId) => {
 
         console.log("PLAYER DEATH EVENT");
 
@@ -1617,12 +1591,12 @@ io.on("connection", async (socket) => {
 
         const killer = players[killerId];
 
-        if(!victim || !killer) return;
+        if (!victim || !killer) return;
 
-        if(!killer.userId) return;
+        if (!killer.userId) return;
 
         const reward1 =
-            5 * (victim.playerPoint);
+            5 * victim.playerPoint;
 
         const reward2 =
             victim.playerPoint;
@@ -1650,7 +1624,7 @@ io.on("connection", async (socket) => {
             ]
         );
 
-        io.to(killerId).emit("pointsReward",{
+        io.to(killerId).emit("pointsReward", {
 
             amount1: reward1,
 
@@ -1660,36 +1634,19 @@ io.on("connection", async (socket) => {
 
     });
 
+
     // ================= DISCONNECT =================
 
-    socket.on("disconnect",()=>{
+    socket.on("disconnect", () => {
 
         delete players[socket.id];
 
         delete pvpCooldown[socket.id];
 
-        io.emit("players",players);
+        io.emit("players", players);
 
-        console.log("Disconnected:",socket.id);
-
-    });
-
-});
-
-// ================= START =================
-
-initDB().then(()=>{
-
-    server.listen(PORT,"0.0.0.0",()=>{
-
-        console.log(
-            `Server running on port ${PORT}`
-        );
+        console.log("Disconnected:", socket.id);
 
     });
-
-}).catch(err => {
-
-    console.error("DATABASE INIT ERROR:", err);
 
 });
