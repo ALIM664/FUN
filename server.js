@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 3000;
-const SECRET = "super_secret_key_change_this";
+const SECRET = process.env.JWT_SECRET;
 
 app.use(cors());
 app.use(express.json());
