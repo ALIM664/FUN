@@ -2989,64 +2989,117 @@ async function saveGame(){
 
 }
 
-
 async function loadGame(){
-    const token = localStorage.getItem("token");
-    if(!token) return;
 
     try {
-        const res = await fetch("/load", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": token
-            }
-        });
 
-        const data = await res.json();
+        const saved =
+            localStorage.getItem("FUN_GAME_PROGRESS");
 
-        if (data.error) {
-            console.log(data.error);
-            return;
-        }
+        if(!saved) return false;
 
-        coins = data.coins;
-        points = data.points;
-        level = data.level;
-        playerColor = data.playerColor;
-        player.speed = data.playerSpeed;
-        playerPower = data.playerPower;
-        attackCooldown = data.attackCooldown;
-        attackRange = data.attackRange;
-        enemyPowerNerf = data.enemyPowerNerf;
+        const data = JSON.parse(saved);
 
-        speedPrice = data.speedPrice;
-        powerPrice = data.powerPrice;
-        attackSpeedPrice = data.attackSpeedPrice;
-        attackRangePrice = data.attackRangePrice;
-        nerfPrice = data.nerfPrice;
+        if(data.coins !== undefined)
+            coins = data.coins;
 
-        invincible = data.invincible;
-        invincibleTimer = data.invincibleTimer;
+        if(data.points !== undefined)
+            points = data.points;
 
-        freezeHit = data.freezeHit;
+        if(data.level !== undefined)
+            level = data.level;
 
-        shield = data.shield;
-        shieldTimer = data.shieldTimer;
+        if(data.playerColor)
+            playerColor = data.playerColor;
+
+        if(data.playerNickname)
+            playerNickname = data.playerNickname;
+
+        if(data.playerSpeed !== undefined)
+            player.speed = data.playerSpeed;
+
+        if(data.playerPower !== undefined)
+            playerPower = data.playerPower;
+
+        if(data.attackCooldown !== undefined)
+            attackCooldown = data.attackCooldown;
+
+        if(data.attackRange !== undefined)
+            attackRange = data.attackRange;
+
+        if(data.enemyPowerNerf !== undefined)
+            enemyPowerNerf = data.enemyPowerNerf;
+
+        if(data.speedPrice !== undefined)
+            speedPrice = data.speedPrice;
+
+        if(data.powerPrice !== undefined)
+            powerPrice = data.powerPrice;
+
+        if(data.attackSpeedPrice !== undefined)
+            attackSpeedPrice = data.attackSpeedPrice;
+
+        if(data.attackRangePrice !== undefined)
+            attackRangePrice = data.attackRangePrice;
+
+        if(data.nerfPrice !== undefined)
+            nerfPrice = data.nerfPrice;
+
+        if(data.immortal !== undefined)
+            immortal = data.immortal;
+
+        if(data.immortalTimer !== undefined)
+            immortalTimer = data.immortalTimer;
+
+        if(data.doubleJump !== undefined)
+            doubleJump = data.doubleJump;
+
+        if(data.doubleJumpCount !== undefined)
+            doubleJumpCount = data.doubleJumpCount;
+
+        if(data.currentMap !== undefined)
+            currentMap = data.currentMap;
+
+        if(data.playerX !== undefined)
+            player.x = data.playerX;
+
+        if(data.playerY !== undefined)
+            player.y = data.playerY;
+
+
+        // ================= UI =================
 
         document.getElementById("coins").textContent = coins;
         document.getElementById("points").textContent = points;
         document.getElementById("level").textContent = level;
-        document.getElementById("playerColorPicker").value = playerColor;
+
+        document.getElementById("playerColorPicker").value =
+            playerColor;
+
+        document.getElementById("nicknameInput").value =
+            playerNickname;
+
 
         updateShopPrices();
         updatePlayerTitle();
         updateMenuTitle();
+        updateEnemyCount();
+
+
+        console.log("LOCAL GAME LOADED");
+
+        return true;
 
     } catch(err){
-        console.log("LOAD ERROR:", err);
+
+        console.log("LOCAL LOAD ERROR:", err);
+
+        return false;
+
     }
+
 }
+
 
 // ================= UPDATE =================
 function update(delta){
