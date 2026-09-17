@@ -2879,16 +2879,74 @@ function backToMenu(){
 }
 
 async function saveGame(){
+
+    // ================= LOCAL STORAGE =================
+
+    const localSave = {
+        coins,
+        points,
+        level,
+
+        playerColor,
+        playerNickname,
+
+        playerSpeed: player.speed,
+        playerPower,
+
+        attackCooldown,
+        attackRange,
+
+        enemyPowerNerf,
+
+        speedPrice,
+        powerPrice,
+        attackSpeedPrice,
+        attackRangePrice,
+        nerfPrice,
+
+        immortal,
+        immortalTimer,
+
+        doubleJump,
+        doubleJumpCount,
+
+        currentMap,
+
+        playerX: player.x,
+        playerY: player.y
+    };
+
     try {
+
+        localStorage.setItem(
+            "FUN_GAME_PROGRESS",
+            JSON.stringify(localSave)
+        );
+
+    } catch(err){
+
+        console.log("LOCAL SAVE ERROR:", err);
+
+    }
+
+
+    // ================= SERVER SAVE =================
+
+    try {
+
         const token = localStorage.getItem("token");
+
         if(!token) return;
 
         await fetch("/save", {
+
             method: "POST",
+
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": token
             },
+
             body: JSON.stringify({
 
                 coins,
@@ -2909,15 +2967,28 @@ async function saveGame(){
                 powerPrice,
                 attackSpeedPrice,
                 attackRangePrice,
-                nerfPrice
+                nerfPrice,
+
+                immortal,
+                immortalTimer,
+
+                doubleJump,
+                doubleJumpCount,
+
+                currentMap
 
             })
+
         });
 
-    } catch (err) {
-        console.log("SAVE ERROR:", err);
+    } catch(err){
+
+        console.log("SERVER SAVE ERROR:", err);
+
     }
+
 }
+
 
 async function loadGame(){
     const token = localStorage.getItem("token");
