@@ -1,3 +1,4 @@
+
 const express = require("express");
 const path = require("path");
 const { Pool } = require("pg");
@@ -83,6 +84,55 @@ async function initDB() {
         )
     `);
 
+    // ================= SAVE STATUS MIGRATION =================
+
+    await pool.query(`
+        ALTER TABLE saves
+        ADD COLUMN IF NOT EXISTS hasSave BOOLEAN
+    `);
+
+    // Определяем, у каких старых аккаунтов уже был прогресс.
+    // Полностью начальное старое сохранение невозможно
+    // отличить от записи, созданной при регистрации.
+
+    await pool.query(`
+        UPDATE saves
+        SET hasSave = (
+            COALESCE(coins, 0) <> 0 OR
+            COALESCE(points, 0) <> 0 OR
+            COALESCE(level, 1) <> 1 OR
+            COALESCE(playercolor, '#ff0000') <> '#ff0000' OR
+            COALESCE(playerspeed, 6) <> 6 OR
+            COALESCE(playerpower, 100) <> 100 OR
+            COALESCE(attackcooldown, 800) <> 800 OR
+            COALESCE(attackrange, 50) <> 50 OR
+            COALESCE(enemypowernerf, 1) <> 1 OR
+            COALESCE(speedprice, 100) <> 100 OR
+            COALESCE(powerprice, 200) <> 200 OR
+            COALESCE(attackspeedprice, 250) <> 250 OR
+            COALESCE(attackrangeprice, 250) <> 250 OR
+            COALESCE(nerfprice, 300) <> 300 OR
+            COALESCE(immortal, 0) <> 0 OR
+            COALESCE(immortaltimer, 0) <> 0 OR
+            COALESCE(doublejump, 0) <> 0 OR
+            COALESCE(doublejumpcount, 0) <> 0 OR
+            COALESCE(currentmap, 0) <> 0 OR
+            COALESCE(playerx, 3000) <> 3000 OR
+            COALESCE(playery, 100) <> 100
+        )
+        WHERE hasSave IS NULL
+    `);
+
+    await pool.query(`
+        ALTER TABLE saves
+        ALTER COLUMN hasSave SET DEFAULT FALSE
+    `);
+
+    await pool.query(`
+        ALTER TABLE saves
+        ALTER COLUMN hasSave SET NOT NULL
+    `);
+
     console.log("POSTGRES TABLES READY");
 }
 
@@ -117,21 +167,40 @@ function auth(req, res, next) {
 
 // ================= REGISTER =================
 
+// ================= REGISTER =================
+
 app.post("/register", async (req, res) => {
 
-    const { nickname, password } = req.body;
+    const nickname = String(req.body?.nickname || "").trim();
+    const password = String(req.body?.password || "").trim();
 
     if (!nickname || !password) {
-        return res.json({
-            error: "empty fields"
+        return res.status(400).json({
+            success: false,
+            error: "Заполни все поля!"
         });
     }
 
+    if (nickname.length > 20 || password.length > 30) {
+        return res.status(400).json({
+            success: false,
+            error: "Слишком длинный ник или пароль!"
+        });
+    }
+
+    let db;
+    let transactionStarted = false;
+
     try {
+
+        db = await pool.connect();
+
+        await db.query("BEGIN");
+        transactionStarted = true;
 
         const hash = await bcrypt.hash(password, 10);
 
-        const user = await pool.query(
+        const user = await db.query(
             `
             INSERT INTO users(nickname, password)
             VALUES($1, $2)
@@ -142,18 +211,25 @@ app.post("/register", async (req, res) => {
 
         const id = user.rows[0].id;
 
-        await pool.query(
+        // Создаём начальное сохранение
+        await db.query(
             `
             INSERT INTO saves(
                 userId,
-                playerNickname
+                playerNickname,
+                hasSave
             )
-            VALUES($1, $2)
+            VALUES($1, $2, FALSE)
             `,
             [id, nickname]
         );
 
-        res.json({
+        await db.query("COMMIT");
+        transactionStarted = false;
+
+        console.log("ACCOUNT CREATED:", nickname);
+
+        res.status(201).json({
             success: true,
             id,
             nickname
@@ -161,11 +237,30 @@ app.post("/register", async (req, res) => {
 
     } catch (err) {
 
-        console.log("REGISTER ERROR:", err);
+        if (transactionStarted && db) {
+            await db.query("ROLLBACK").catch(console.error);
+        }
 
-        res.json({
-            error: "user exists"
+        console.error("REGISTER ERROR:", err);
+
+        if (err.code === "23505") {
+            return res.status(409).json({
+                success: false,
+                error: "Такой ник уже занят!"
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            error: "Ошибка создания аккаунта",
+            details: err.message
         });
+
+    } finally {
+
+        if (db) {
+            db.release();
+        }
 
     }
 
@@ -236,36 +331,6 @@ app.post("/login", async (req, res) => {
 
 });
 
-// ================= DELETE ACCOUNT =================
-
-app.delete("/account", auth, async (req, res) => {
-
-    try {
-
-        await pool.query(
-            `
-            DELETE FROM users
-            WHERE id = $1
-            `,
-            [req.userId]
-        );
-
-        res.json({
-            success: true
-        });
-
-    } catch (err) {
-
-        console.log("DELETE ACCOUNT ERROR:", err);
-
-        res.status(500).json({
-            error: err.message
-        });
-
-    }
-
-});
-
 // ================= SAVE GAME =================
 
 app.post("/save", auth, async (req, res) => {
@@ -309,7 +374,8 @@ app.post("/save", auth, async (req, res) => {
                 currentMap,
 
                 playerX,
-                playerY
+                playerY,
+                hasSave
             )
 
             VALUES(
@@ -336,7 +402,8 @@ app.post("/save", auth, async (req, res) => {
                 $21,
                 $22,
                 $23,
-                $24
+                $24,
+                TRUE
             )
 
             ON CONFLICT(userId)
@@ -372,7 +439,8 @@ app.post("/save", auth, async (req, res) => {
                 currentMap = EXCLUDED.currentMap,
 
                 playerX = EXCLUDED.playerX,
-                playerY = EXCLUDED.playerY
+                playerY = EXCLUDED.playerY,
+                hasSave = TRUE
             `,
             [
                 req.userId,
@@ -442,86 +510,69 @@ app.post("/load", auth, async (req, res) => {
             [req.userId]
         );
 
-        if (result.rows.length === 0) {
+        // Если серверного сохранения нет,
+        // клиент должен проверить локальную копию.
+
+        if (
+            result.rows.length === 0 ||
+            !result.rows[0].hassave
+        ) {
 
             return res.json({
-                coins: 0,
-                points: 0,
-                level: 1,
-
-                playerColor: "#ff0000",
-                playerNickname: null,
-
-                playerSpeed: 6,
-                playerPower: 100,
-
-                attackCooldown: 800,
-                attackRange: 50,
-
-                enemyPowerNerf: 1,
-
-                speedPrice: 100,
-                powerPrice: 200,
-                attackSpeedPrice: 250,
-                attackRangePrice: 250,
-                nerfPrice: 300,
-
-                immortal: false,
-                immortalTimer: 0,
-
-                doubleJump: false,
-                doubleJumpCount: 0,
-
-                currentMap: 0,
-
-                playerX: 3000,
-                playerY: 100
+                exists: false
             });
 
         }
 
         const row = result.rows[0];
 
-        res.json({
+        return res.json({
 
-            coins: row.coins,
-            points: row.points,
-            level: row.level,
+            exists: true,
 
-            playerColor: row.playercolor,
-            playerNickname: row.playernickname,
+            data: {
 
-            playerSpeed: row.playerspeed,
-            playerPower: row.playerpower,
+                coins: row.coins,
+                points: row.points,
+                level: row.level,
 
-            attackCooldown: row.attackcooldown,
-            attackRange: row.attackrange,
+                playerColor: row.playercolor,
+                playerNickname: row.playernickname,
 
-            enemyPowerNerf: row.enemypowernerf,
+                playerSpeed: row.playerspeed,
+                playerPower: row.playerpower,
 
-            speedPrice: row.speedprice,
-            powerPrice: row.powerprice,
-            attackSpeedPrice: row.attackspeedprice,
-            attackRangePrice: row.attackrangeprice,
-            nerfPrice: row.nerfprice,
+                attackCooldown: row.attackcooldown,
+                attackRange: row.attackrange,
 
-            immortal: Boolean(row.immortal),
-            immortalTimer: row.invincibletimer,
+                enemyPowerNerf: row.enemypowernerf,
 
-            doubleJump: Boolean(row.doublejump),
-            doubleJumpCount: row.doublejumpcount,
+                speedPrice: row.speedprice,
+                powerPrice: row.powerprice,
+                attackSpeedPrice: row.attackspeedprice,
+                attackRangePrice: row.attackrangeprice,
+                nerfPrice: row.nerfprice,
 
-            currentMap: row.currentmap,
+                immortal: Boolean(row.immortal),
+                immortalTimer: row.immortaltimer,
 
-            playerX: row.playerx,
-            playerY: row.playery
+                doubleJump: Boolean(row.doublejump),
+                doubleJumpCount: row.doublejumpcount,
+
+                currentMap: row.currentmap,
+
+                playerX: row.playerx,
+                playerY: row.playery
+
+            }
+
         });
 
     } catch (err) {
 
         console.log("LOAD ERROR:", err);
 
-        res.status(500).json({
+        return res.status(500).json({
             error: err.message
         });
 
