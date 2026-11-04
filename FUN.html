@@ -618,21 +618,6 @@ canvas {
     ">
         Account Info
     </button>
-
-    <button id="deleteAccountBtn" onclick="deleteAccount()"
-    style="
-        width:220px;
-        height:60px;
-        font-size:20px;
-        background:darkred;
-        border:4px solid red;
-        border-radius:10px;
-        color:white;
-        font-weight:900;
-        display:none;
-    ">
-        Delete Account
-    </button>
     
     <button id="fullBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
 
@@ -1630,40 +1615,61 @@ function startGame(){
 
 async function createAccount() {
 
-    alert("createAccount");
+const nickname =
+    document.getElementById("nicknameInput").value.trim();
 
-    const nickname = document.getElementById("nicknameInput").value.trim();
-    const password = document.getElementById("passwordInput").value.trim();
+const password =
+    document.getElementById("passwordInput").value.trim();
 
-    try {
+if (!nickname || !password) {
+    alert("Заполни ник и пароль!");
+    return;
+}
 
-        console.log("Отправляем запрос...");
+try {
 
-        const res = await fetch("/register", {
-            method: "POST",
-            headers: {
-                "Content-Type":"application/json"
-            },
-            body: JSON.stringify({
-                nickname,
-                password
-            })
-        });
+    const res = await fetch("/register", {
 
-        console.log("STATUS:", res.status);
+        method: "POST",
 
-        const data = await res.json();
+        headers: {
+            "Content-Type": "application/json"
+        },
 
-        console.log(data);
+        body: JSON.stringify({
+            nickname,
+            password
+        })
 
-        alert(JSON.stringify(data));
+    });
 
-    } catch(err) {
+    const data = await res.json();
 
-        console.error(err);
+    if (!res.ok || !data.success) {
 
-        alert("ERROR:\n" + err.message);
+        alert(
+            data.error +
+            (data.details ? "\n" + data.details : "")
+        );
+
+        return;
     }
+
+    alert(
+        "АККАУНТ УСПЕШНО СОЗДАН!\n\n" +
+        "Nickname: " + data.nickname +
+        "\nID: " + data.id +
+        "\n\nТеперь можешь войти!"
+    );
+
+} catch (err) {
+
+    console.error("REGISTER ERROR:", err);
+
+    alert("Ошибка подключения к серверу: " + err.message);
+
+}
+
 }
 
 async function loginAccount() {
@@ -1692,7 +1698,7 @@ async function loginAccount() {
         
             localStorage.setItem("token", data.token);
 
-            loadGame();
+            await loadGame();
 
             socket.emit("setPlayerData", {
                 userId: currentUser.id,
@@ -1745,64 +1751,6 @@ function restoreLogin() {
     } catch (e) {
         localStorage.removeItem("account");
         localStorage.removeItem("token");
-    }
-}
-
-async function deleteAccount(){
-
-    const token = localStorage.getItem("token");
-
-    if(!token){
-        alert("Нет входа в аккаунт");
-        return;
-    }
-
-    if(!confirm("Удалить аккаунт навсегда?")) return;
-
-    try {
-
-        const res = await fetch("/account", {
-            method:"DELETE",
-            headers:{
-                "Authorization": token
-            }
-        });
-
-        console.log("STATUS:", res.status);
-
-        const data = await res.json();
-
-        console.log("DELETE RESPONSE:", data);
-
-        if(data.success){
-
-            localStorage.removeItem("token");
-            localStorage.removeItem("account");
-            localStorage.removeItem("FUN_ACCOUNT");
-
-            currentUser.nickname = null;
-            currentUser.id = null;
-            currentUser.loggedIn = false;
-
-            alert("Аккаунт удалён");
-            
-            document.getElementById("accountInfoBtn").style.display = "none";
-            document.getElementById("deleteAccountBtn").style.display = "none";
-
-            location.reload();
-
-        } else {
-
-            alert("Ошибка удаления: " + JSON.stringify(data));
-
-        }
-
-    } catch(err){
-
-        console.error(err);
-
-        alert("DELETE ERROR: " + err.message);
-
     }
 }
 
@@ -2878,227 +2826,437 @@ function backToMenu(){
     keys["Space"] = false;
 }
 
-async function saveGame(){
 
-    // ================= LOCAL STORAGE =================
+// ================= HYBRID SAVE SYSTEM =================
 
-    const localSave = {
-        coins,
-        points,
-        level,
+// У каждого аккаунта своя локальная копия
+function getGameSaveKey() {
 
-        playerColor,
-        playerNickname,
+if (currentUser.id == null) {
+    return "FUN_GAME_PROGRESS";
+}
 
-        playerSpeed: player.speed,
-        playerPower,
-
-        attackCooldown,
-        attackRange,
-
-        enemyPowerNerf,
-
-        speedPrice,
-        powerPrice,
-        attackSpeedPrice,
-        attackRangePrice,
-        nerfPrice,
-
-        immortal,
-        immortalTimer,
-
-        doubleJump,
-        doubleJumpCount,
-
-        currentMap,
-
-        playerX: player.x,
-        playerY: player.y
-    };
-
-    try {
-
-        localStorage.setItem(
-            "FUN_GAME_PROGRESS",
-            JSON.stringify(localSave)
-        );
-
-    } catch(err){
-
-        console.log("LOCAL SAVE ERROR:", err);
-
-    }
-
-
-    // ================= SERVER SAVE =================
-
-    try {
-
-        const token = localStorage.getItem("token");
-
-        if(!token) return;
-
-        await fetch("/save", {
-
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": token
-            },
-
-            body: JSON.stringify({
-
-                coins,
-                points,
-                level,
-
-                playerColor,
-
-                playerSpeed: player.speed,
-                playerPower,
-
-                attackCooldown,
-                attackRange,
-
-                enemyPowerNerf,
-
-                speedPrice,
-                powerPrice,
-                attackSpeedPrice,
-                attackRangePrice,
-                nerfPrice,
-
-                immortal,
-                immortalTimer,
-
-                doubleJump,
-                doubleJumpCount,
-
-                currentMap
-
-            })
-
-        });
-
-    } catch(err){
-
-        console.log("SERVER SAVE ERROR:", err);
-
-    }
+return `FUN_GAME_PROGRESS_${currentUser.id}`;
 
 }
 
-async function loadGame(){
 
-    try {
+// ================= COLLECT DATA =================
 
-        const saved =
+function collectGameSave() {
+
+return {
+
+    coins,
+    points,
+    level,
+
+    playerColor,
+    playerNickname,
+
+    playerSpeed: player.speed,
+    playerPower,
+
+    attackCooldown,
+    attackRange,
+
+    enemyPowerNerf,
+
+    speedPrice,
+    powerPrice,
+    attackSpeedPrice,
+    attackRangePrice,
+    nerfPrice,
+
+    immortal,
+    immortalTimer,
+
+    doubleJump,
+    doubleJumpCount,
+
+    currentMap,
+
+    playerX: player.x,
+    playerY: player.y
+
+};
+
+}
+
+
+// ================= LOCAL SAVE =================
+
+function writeLocalGameSave(data) {
+
+try {
+
+    const backup = {
+        ...data,
+        savedAt: Date.now()
+    };
+
+    localStorage.setItem(
+        getGameSaveKey(),
+        JSON.stringify(backup)
+    );
+
+    return true;
+
+} catch (err) {
+
+    console.log("LOCAL SAVE ERROR:", err);
+
+    return false;
+
+}
+
+}
+
+
+// ================= LOCAL LOAD =================
+
+function readLocalGameSave() {
+
+try {
+
+    const key = getGameSaveKey();
+
+    let saved = localStorage.getItem(key);
+
+    // Перенос старого сохранения
+    // FUN_GAME_PROGRESS в аккаунтный ключ
+
+    if (!saved && currentUser.id != null) {
+
+        const oldSave =
             localStorage.getItem("FUN_GAME_PROGRESS");
 
-        if(!saved) return false;
+        if (oldSave) {
 
-        const data = JSON.parse(saved);
+            saved = oldSave;
 
-        if(data.coins !== undefined)
-            coins = data.coins;
+            localStorage.setItem(key, oldSave);
 
-        if(data.points !== undefined)
-            points = data.points;
+            localStorage.removeItem(
+                "FUN_GAME_PROGRESS"
+            );
 
-        if(data.level !== undefined)
-            level = data.level;
+        }
 
-        if(data.playerColor)
-            playerColor = data.playerColor;
+    }
 
-        if(data.playerNickname)
-            playerNickname = data.playerNickname;
+    if (!saved) return null;
 
-        if(data.playerSpeed !== undefined)
-            player.speed = data.playerSpeed;
+    const data = JSON.parse(saved);
 
-        if(data.playerPower !== undefined)
-            playerPower = data.playerPower;
+    if (!data || typeof data !== "object") {
+        return null;
+    }
 
-        if(data.attackCooldown !== undefined)
-            attackCooldown = data.attackCooldown;
+    return data;
 
-        if(data.attackRange !== undefined)
-            attackRange = data.attackRange;
+} catch (err) {
 
-        if(data.enemyPowerNerf !== undefined)
-            enemyPowerNerf = data.enemyPowerNerf;
+    console.log("LOCAL LOAD ERROR:", err);
 
-        if(data.speedPrice !== undefined)
-            speedPrice = data.speedPrice;
+    return null;
 
-        if(data.powerPrice !== undefined)
-            powerPrice = data.powerPrice;
+}
 
-        if(data.attackSpeedPrice !== undefined)
-            attackSpeedPrice = data.attackSpeedPrice;
-
-        if(data.attackRangePrice !== undefined)
-            attackRangePrice = data.attackRangePrice;
-
-        if(data.nerfPrice !== undefined)
-            nerfPrice = data.nerfPrice;
-
-        if(data.immortal !== undefined)
-            immortal = data.immortal;
-
-        if(data.immortalTimer !== undefined)
-            immortalTimer = data.immortalTimer;
-
-        if(data.doubleJump !== undefined)
-            doubleJump = data.doubleJump;
-
-        if(data.doubleJumpCount !== undefined)
-            doubleJumpCount = data.doubleJumpCount;
-
-        if(data.currentMap !== undefined)
-            currentMap = data.currentMap;
-
-        if(data.playerX !== undefined)
-            player.x = data.playerX;
-
-        if(data.playerY !== undefined)
-            player.y = data.playerY;
+}
 
 
-        // ================= UI =================
+// ================= APPLY SAVE =================
 
-        document.getElementById("coins").textContent = coins;
-        document.getElementById("points").textContent = points;
-        document.getElementById("level").textContent = level;
+function applyGameSave(data) {
 
-        document.getElementById("playerColorPicker").value =
-            playerColor;
+if (!data || typeof data !== "object") {
+    return false;
+}
 
-        document.getElementById("nicknameInput").value =
-            playerNickname;
+if (data.coins !== undefined)
+    coins = data.coins;
+
+if (data.points !== undefined)
+    points = data.points;
+
+if (data.level !== undefined)
+    level = data.level;
+
+if (data.playerColor !== undefined)
+    playerColor = data.playerColor;
+
+if (data.playerNickname !== undefined &&
+    data.playerNickname !== null) {
+
+    playerNickname = data.playerNickname;
+
+}
+
+if (data.playerSpeed !== undefined)
+    player.speed = data.playerSpeed;
+
+if (data.playerPower !== undefined)
+    playerPower = data.playerPower;
+
+if (data.attackCooldown !== undefined)
+    attackCooldown = data.attackCooldown;
+
+if (data.attackRange !== undefined)
+    attackRange = data.attackRange;
+
+if (data.enemyPowerNerf !== undefined)
+    enemyPowerNerf = data.enemyPowerNerf;
+
+if (data.speedPrice !== undefined)
+    speedPrice = data.speedPrice;
+
+if (data.powerPrice !== undefined)
+    powerPrice = data.powerPrice;
+
+if (data.attackSpeedPrice !== undefined)
+    attackSpeedPrice = data.attackSpeedPrice;
+
+if (data.attackRangePrice !== undefined)
+    attackRangePrice = data.attackRangePrice;
+
+if (data.nerfPrice !== undefined)
+    nerfPrice = data.nerfPrice;
+
+if (data.immortal !== undefined)
+    immortal = Boolean(data.immortal);
+
+if (data.immortalTimer !== undefined)
+    immortalTimer = data.immortalTimer;
+
+if (data.doubleJump !== undefined)
+    doubleJump = Boolean(data.doubleJump);
+
+if (data.doubleJumpCount !== undefined)
+    doubleJumpCount = data.doubleJumpCount;
+
+if (data.currentMap !== undefined)
+    currentMap = data.currentMap;
+
+if (data.playerX !== undefined)
+    player.x = data.playerX;
+
+if (data.playerY !== undefined)
+    player.y = data.playerY;
 
 
-        updateShopPrices();
-        updatePlayerTitle();
-        updateMenuTitle();
-        updateEnemyCount();
+// ================= UPDATE UI =================
+
+document.getElementById("coins").textContent = coins;
+
+document.getElementById("points").textContent = points;
+
+document.getElementById("level").textContent = level;
+
+document.getElementById("playerColorPicker").value =
+    playerColor;
+
+document.getElementById("nicknameInput").value =
+    playerNickname;
 
 
-        console.log("LOCAL GAME LOADED");
+updateShopPrices();
+
+updatePlayerTitle();
+
+updateMenuTitle();
+
+updateEnemyCount();
+
+return true;
+
+}
+
+
+// ================= SAVE GAME =================
+
+async function saveGame() {
+
+const data = collectGameSave();
+
+// Сначала сохраняем на устройстве
+writeLocalGameSave(data);
+
+const token = localStorage.getItem("token");
+
+if (!token) return false;
+
+// Затем отправляем на сервер
+
+try {
+
+    const res = await fetch("/save", {
+
+        method: "POST",
+
+        headers: {
+
+            "Content-Type": "application/json",
+
+            "Authorization": token
+
+        },
+
+        body: JSON.stringify(data)
+
+    });
+
+    if (!res.ok) {
+
+        throw new Error("SERVER HTTP " + res.status);
+
+    }
+
+    const result = await res.json();
+
+    if (!result.success) {
+
+        throw new Error("SERVER SAVE FAILED");
+
+    }
+
+    console.log("SERVER SAVE SUCCESS");
+
+    return true;
+
+} catch (err) {
+
+    console.log("SERVER SAVE ERROR:", err);
+
+    // Локальная копия уже сохранена
+
+    return false;
+
+}
+
+}
+
+
+// ================= LOAD GAME =================
+
+async function loadGame() {
+
+const token = localStorage.getItem("token");
+
+if (!token || currentUser.id == null) {
+    return false;
+}
+
+// Сначала читаем резервную копию
+const localBackup = readLocalGameSave();
+
+
+try {
+
+    // Проверяем сервер
+
+    const res = await fetch("/load", {
+
+        method: "POST",
+
+        headers: {
+
+            "Authorization": token
+
+        }
+
+    });
+
+    if (!res.ok) {
+
+        throw new Error("SERVER HTTP " + res.status);
+
+    }
+
+    const result = await res.json();
+
+
+    // ================= SERVER HAS SAVE =================
+
+    if (result.exists === true && result.data) {
+
+        console.log("LOADING FROM SERVER");
+
+        applyGameSave(result.data);
+
+        // Обновляем резервную копию
+        writeLocalGameSave(result.data);
 
         return true;
 
-    } catch(err){
+    }
 
-        console.log("LOCAL LOAD ERROR:", err);
 
-        return false;
+    // ================= SERVER HAS NO SAVE =================
+
+    if (result.exists === false) {
+
+        console.log("SERVER SAVE NOT FOUND");
+
+        if (localBackup) {
+
+            console.log("RESTORING FROM DEVICE");
+
+            applyGameSave(localBackup);
+
+        } else {
+
+            console.log("NO LOCAL BACKUP");
+
+            // Используем начальные значения игры
+            applyGameSave({});
+
+        }
+
+        // Создаём серверную копию
+        await saveGame();
+
+        return true;
 
     }
 
+    throw new Error("INVALID SERVER RESPONSE");
+
+} catch (err) {
+
+    console.log("SERVER LOAD ERROR:", err);
+
+    // ================= OFFLINE FALLBACK =================
+
+    if (localBackup) {
+
+        console.log("RESTORING LOCAL BACKUP");
+
+        applyGameSave(localBackup);
+
+        return true;
+
+    }
+
+    console.log("NO AVAILABLE SAVE");
+
+    return false;
+
 }
+
+}
+
+
+// Повторная синхронизация после восстановления соединения
+
+window.addEventListener("online", () => {
+
+if (currentUser.loggedIn) {
+    saveGame();
+}
+
+});
+
 
 
 // ================= UPDATE =================
@@ -3709,11 +3867,6 @@ function draw(){
     ctx.restore();
 }
 
-window.addEventListener("load", async () => {
-    restoreLogin();
-    await loadGame();
-});
-
 // ================= LOOP =================
 let lastTime = performance.now();
 
@@ -3733,7 +3886,7 @@ function loop(time) {
     requestAnimationFrame(loop);
 }
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
 
     const colorPicker = document.getElementById("playerColorPicker");
 
@@ -3770,10 +3923,12 @@ window.addEventListener("load", () => {
         playerNickname = acc.nickname;
     }
 
-    loadGame();
+    restoreLogin();
+
+    await loadGame();
+
     updatePlayerTitle();
     updateMenuTitle();
-    restoreLogin();
 });
 </script>
 </body>
