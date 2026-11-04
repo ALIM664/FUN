@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET || "change_this_secret";
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 app.use(express.static(__dirname));
 
 // ================= MAIN PAGE =================
@@ -38,6 +38,8 @@ const pool = new Pool({
 
 async function initDB() {
 
+    // USERS
+
     await pool.query(`
         CREATE TABLE IF NOT EXISTS users(
             id SERIAL PRIMARY KEY,
@@ -45,6 +47,8 @@ async function initDB() {
             password TEXT NOT NULL
         )
     `);
+
+    // SAVES
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS saves(
@@ -84,16 +88,53 @@ async function initDB() {
         )
     `);
 
-    // ================= SAVE STATUS MIGRATION =================
+    // ================= OLD DATABASE MIGRATION =================
+    // Добавляем отсутствующие столбцы в существующую таблицу.
+    // Уже имеющиеся данные не удаляются.
 
     await pool.query(`
         ALTER TABLE saves
+
+        ADD COLUMN IF NOT EXISTS coins INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1,
+
+        ADD COLUMN IF NOT EXISTS playerColor TEXT DEFAULT '#ff0000',
+        ADD COLUMN IF NOT EXISTS playerNickname TEXT,
+
+        ADD COLUMN IF NOT EXISTS playerSpeed INTEGER DEFAULT 6,
+        ADD COLUMN IF NOT EXISTS playerPower INTEGER DEFAULT 100,
+
+        ADD COLUMN IF NOT EXISTS attackCooldown INTEGER DEFAULT 800,
+        ADD COLUMN IF NOT EXISTS attackRange INTEGER DEFAULT 50,
+
+        ADD COLUMN IF NOT EXISTS enemyPowerNerf REAL DEFAULT 1,
+
+        ADD COLUMN IF NOT EXISTS speedPrice INTEGER DEFAULT 100,
+        ADD COLUMN IF NOT EXISTS powerPrice INTEGER DEFAULT 200,
+        ADD COLUMN IF NOT EXISTS attackSpeedPrice INTEGER DEFAULT 250,
+        ADD COLUMN IF NOT EXISTS attackRangePrice INTEGER DEFAULT 250,
+        ADD COLUMN IF NOT EXISTS nerfPrice INTEGER DEFAULT 300,
+
+        ADD COLUMN IF NOT EXISTS immortal INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS immortalTimer INTEGER DEFAULT 0,
+
+        ADD COLUMN IF NOT EXISTS doubleJump INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS doubleJumpCount INTEGER DEFAULT 0,
+
+        ADD COLUMN IF NOT EXISTS currentMap INTEGER DEFAULT 0,
+
+        ADD COLUMN IF NOT EXISTS playerX REAL DEFAULT 3000,
+        ADD COLUMN IF NOT EXISTS playerY REAL DEFAULT 100,
+
         ADD COLUMN IF NOT EXISTS hasSave BOOLEAN
     `);
 
-    // Определяем, у каких старых аккаунтов уже был прогресс.
-    // Полностью начальное старое сохранение невозможно
-    // отличить от записи, созданной при регистрации.
+    // ================= SAVE STATUS =================
+
+    // Проверяем старые сохранения.
+    // Если прогресс отличается от начальных значений,
+    // считаем, что сохранение существует.
 
     await pool.query(`
         UPDATE saves
@@ -101,22 +142,30 @@ async function initDB() {
             COALESCE(coins, 0) <> 0 OR
             COALESCE(points, 0) <> 0 OR
             COALESCE(level, 1) <> 1 OR
+
             COALESCE(playercolor, '#ff0000') <> '#ff0000' OR
             COALESCE(playerspeed, 6) <> 6 OR
             COALESCE(playerpower, 100) <> 100 OR
+
             COALESCE(attackcooldown, 800) <> 800 OR
             COALESCE(attackrange, 50) <> 50 OR
+
             COALESCE(enemypowernerf, 1) <> 1 OR
+
             COALESCE(speedprice, 100) <> 100 OR
             COALESCE(powerprice, 200) <> 200 OR
             COALESCE(attackspeedprice, 250) <> 250 OR
             COALESCE(attackrangeprice, 250) <> 250 OR
             COALESCE(nerfprice, 300) <> 300 OR
+
             COALESCE(immortal, 0) <> 0 OR
             COALESCE(immortaltimer, 0) <> 0 OR
+
             COALESCE(doublejump, 0) <> 0 OR
             COALESCE(doublejumpcount, 0) <> 0 OR
+
             COALESCE(currentmap, 0) <> 0 OR
+
             COALESCE(playerx, 3000) <> 3000 OR
             COALESCE(playery, 100) <> 100
         )
@@ -134,6 +183,7 @@ async function initDB() {
     `);
 
     console.log("POSTGRES TABLES READY");
+    console.log("SAVE SYSTEM READY");
 }
 
 // ================= AUTH =================
@@ -167,12 +217,13 @@ function auth(req, res, next) {
 
 // ================= REGISTER =================
 
-// ================= REGISTER =================
-
 app.post("/register", async (req, res) => {
 
-    const nickname = String(req.body?.nickname || "").trim();
-    const password = String(req.body?.password || "").trim();
+    const nickname =
+        String(req.body?.nickname || "").trim();
+
+    const password =
+        String(req.body?.password || "").trim();
 
     if (!nickname || !password) {
         return res.status(400).json({
@@ -188,7 +239,7 @@ app.post("/register", async (req, res) => {
         });
     }
 
-    let db;
+    let db = null;
     let transactionStarted = false;
 
     try {
@@ -212,6 +263,7 @@ app.post("/register", async (req, res) => {
         const id = user.rows[0].id;
 
         // Создаём начальное сохранение
+
         await db.query(
             `
             INSERT INTO saves(
@@ -238,7 +290,11 @@ app.post("/register", async (req, res) => {
     } catch (err) {
 
         if (transactionStarted && db) {
-            await db.query("ROLLBACK").catch(console.error);
+            try {
+                await db.query("ROLLBACK");
+            } catch (rollbackError) {
+                console.error("ROLLBACK ERROR:", rollbackError);
+            }
         }
 
         console.error("REGISTER ERROR:", err);
@@ -270,7 +326,18 @@ app.post("/register", async (req, res) => {
 
 app.post("/login", async (req, res) => {
 
-    const { nickname, password } = req.body;
+    const nickname =
+        String(req.body?.nickname || "").trim();
+
+    const password =
+        String(req.body?.password || "").trim();
+
+    if (!nickname || !password) {
+        return res.status(400).json({
+            success: false,
+            error: "Заполни все поля"
+        });
+    }
 
     try {
 
@@ -286,7 +353,8 @@ app.post("/login", async (req, res) => {
         const user = result.rows[0];
 
         if (!user) {
-            return res.json({
+            return res.status(404).json({
+                success: false,
                 error: "not user found"
             });
         }
@@ -297,7 +365,8 @@ app.post("/login", async (req, res) => {
         );
 
         if (!ok) {
-            return res.json({
+            return res.status(401).json({
+                success: false,
                 error: "wrong password"
             });
         }
@@ -324,6 +393,7 @@ app.post("/login", async (req, res) => {
         console.log("LOGIN ERROR:", err);
 
         res.status(500).json({
+            success: false,
             error: err.message
         });
 
@@ -335,13 +405,14 @@ app.post("/login", async (req, res) => {
 
 app.post("/save", auth, async (req, res) => {
 
-    const data = req.body;
+    const data = req.body || {};
 
     try {
 
         await pool.query(
             `
             INSERT INTO saves(
+
                 userId,
 
                 coins,
@@ -375,6 +446,7 @@ app.post("/save", auth, async (req, res) => {
 
                 playerX,
                 playerY,
+
                 hasSave
             )
 
@@ -402,7 +474,6 @@ app.post("/save", auth, async (req, res) => {
                 $21,
                 $22,
                 $23,
-                $24,
                 TRUE
             )
 
@@ -440,9 +511,11 @@ app.post("/save", auth, async (req, res) => {
 
                 playerX = EXCLUDED.playerX,
                 playerY = EXCLUDED.playerY,
+
                 hasSave = TRUE
             `,
             [
+
                 req.userId,
 
                 data.coins ?? 0,
@@ -476,6 +549,7 @@ app.post("/save", auth, async (req, res) => {
 
                 data.playerX ?? 3000,
                 data.playerY ?? 100
+
             ]
         );
 
@@ -488,6 +562,7 @@ app.post("/save", auth, async (req, res) => {
         console.log("SAVE ERROR:", err);
 
         res.status(500).json({
+            success: false,
             error: err.message
         });
 
@@ -510,12 +585,11 @@ app.post("/load", auth, async (req, res) => {
             [req.userId]
         );
 
-        // Если серверного сохранения нет,
-        // клиент должен проверить локальную копию.
+        // Серверного сохранения нет
 
         if (
             result.rows.length === 0 ||
-            !result.rows[0].hassave
+            result.rows[0].hassave !== true
         ) {
 
             return res.json({
@@ -526,7 +600,7 @@ app.post("/load", auth, async (req, res) => {
 
         const row = result.rows[0];
 
-        return res.json({
+        res.json({
 
             exists: true,
 
@@ -572,7 +646,7 @@ app.post("/load", auth, async (req, res) => {
 
         console.log("LOAD ERROR:", err);
 
-        return res.status(500).json({
+        res.status(500).json({
             error: err.message
         });
 
@@ -595,6 +669,7 @@ io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
 
     players[socket.id] = {
+
         x: 3000,
         y: 100,
 
@@ -608,6 +683,7 @@ io.on("connection", (socket) => {
         playerPoint: 1,
 
         map: 0
+
     };
 
     io.emit("players", players);
@@ -712,5 +788,7 @@ initDB()
             "DATABASE INIT ERROR:",
             err
         );
+
+        process.exit(1);
 
     });
